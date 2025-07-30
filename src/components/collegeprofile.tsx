@@ -2,6 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Basiceligibilty } from "./collegeprofileui/basiceligibilty"
 
 function CollegeProfile() {
   return (
@@ -10,27 +11,22 @@ function CollegeProfile() {
       
       <Tabs defaultValue="tab1" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="tab1">Tab 1</TabsTrigger>
-          <TabsTrigger value="tab2">Tab 2</TabsTrigger>
-          <TabsTrigger value="tab3">Tab 3</TabsTrigger>
-          <TabsTrigger value="tab4">Tab 4</TabsTrigger>
+          <TabsTrigger value="tab1">Basic Eligibility </TabsTrigger>
+          <TabsTrigger value="tab2">Affiliation details</TabsTrigger>
+          <TabsTrigger value="tab3">Academic Programs </TabsTrigger>
+          <TabsTrigger value="tab4">Quality Information</TabsTrigger>
         </TabsList>
         
         <TabsContent value="tab1" className="mt-6">
           <Card>
-            <CardHeader>
+            {/* <CardHeader>
               <CardTitle>Academic Information</CardTitle>
               <CardDescription>
-                Comprehensive details about academic programs and curriculum
+             
               </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-700 leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                The college offers a diverse range of undergraduate and graduate programs designed to prepare students for successful careers in their chosen fields. Our faculty consists of experienced professionals and researchers who are committed to providing quality education and mentorship to all students.
-              </p>
+            </CardHeader> */}
+            <CardContent className="w-full">
+              <Basiceligibilty></Basiceligibilty>
             </CardContent>
           </Card>
         </TabsContent>
