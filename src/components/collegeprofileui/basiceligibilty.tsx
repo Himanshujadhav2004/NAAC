@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { Checkbox } from '../ui/checkbox'
 
 import { ChevronDownIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,14 @@ export const Basiceligibilty = () => {
     const [selectedState, setSelectedState] = useState('')
     const [selectedDistrict, setSelectedDistrict] = useState('')
     const [districts, setDistricts] = useState<string[]>([])
+    
+    // Nature of college selections
+    const [natureSelections, setNatureSelections] = useState({
+        Private: false,
+        Government: false,
+        'Self-fiancing': false,
+        'Grant-in-aid': false
+    })
     
     // Form state
     const [formData, setFormData] = useState({
@@ -39,7 +48,8 @@ export const Basiceligibilty = () => {
         mobileNo: '',
         email: '',
         alternateEmail: '',
-        website: ''
+        website: '',
+        natureOfCollege: [] as string[]
     })
 
     const indiaData = {
