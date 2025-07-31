@@ -21,6 +21,12 @@ export const Basiceligibilty = () => {
     const [selectedDistrict, setSelectedDistrict] = useState('')
     const [districts, setDistricts] = useState<string[]>([])
     
+    // Alternate Faculty Contact States
+    const [selectedAlternateState, setSelectedAlternateState] = useState('')
+    const [selectedAlternateDistrict, setSelectedAlternateDistrict] = useState('')
+    const [alternateDistricts, setAlternateDistricts] = useState<string[]>([])
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    
     // Nature of college selections
     const [natureSelections, setNatureSelections] = useState({
         Private: false,
@@ -49,7 +55,19 @@ export const Basiceligibilty = () => {
         email: '',
         alternateEmail: '',
         website: '',
-        natureOfCollege: [] as string[]
+        natureOfCollege: [] as string[],
+        // Alternate Faculty Contact Information
+        alternateFacultyName: '',
+        alternateAddress: '',
+        alternateState: '',
+        alternateDistrict: '',
+        alternateCity: '',
+        alternatePin: '',
+        alternatePhoneNo: '',
+        alternateFaxNo: '',
+        alternateMobileNo: '',
+        alternateFacultyEmail: '',
+        alternateFacultyAlternateEmail: ''
     })
 
     const indiaData = {
@@ -1352,6 +1370,19 @@ export const Basiceligibilty = () => {
         setFormData(prev => ({ ...prev, district: value }))
     }
 
+    // Alternate Faculty Contact Handlers
+    const handleAlternateStateChange = (value: string) => {
+        setSelectedAlternateState(value)
+        setSelectedAlternateDistrict('') // Reset district when state changes
+        setAlternateDistricts(indiaData[value as keyof typeof indiaData] || [])
+        setFormData(prev => ({ ...prev, alternateState: value, alternateDistrict: '' }))
+    }
+
+    const handleAlternateDistrictChange = (value: string) => {
+        setSelectedAlternateDistrict(value)
+        setFormData(prev => ({ ...prev, alternateDistrict: value }))
+    }
+
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
@@ -1385,18 +1416,113 @@ export const Basiceligibilty = () => {
         return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
-        // Update form data with current state values
-        const finalFormData = {
-            ...formData,
-            state: selectedState,
-            district: selectedDistrict
+        try {
+            setIsSubmitting(true)
+            
+            // Update form data with current state values
+            const finalFormData = {
+                ...formData,
+                state: selectedState,
+                district: selectedDistrict,
+                alternateState: selectedAlternateState,
+                alternateDistrict: selectedAlternateDistrict
+            }
+            
+            // Prepare complete data object
+            const completeData = {
+                basicEligibility: finalFormData,
+                timestamp: new Date().toISOString(),
+                ageOfInstitution: getAgeInYearsAndMonths(date),
+                summary: {
+                    hasAlternateFaculty: !!finalFormData.alternateFacultyName,
+                    totalFields: Object.keys(finalFormData).length
+                }
+            }
+            
+            // Log all data to console
+            console.log('=== BASIC ELIGIBILITY FORM DATA ===')
+            console.log('Complete Form Data:', completeData)
+            console.log('---')
+            console.log('College Information:', {
+                collegeAISHEID: finalFormData.collegeAISHEID,
+                cycleOfAccreditation: finalFormData.cycleOfAccreditation,
+                collegeName: finalFormData.collegeName,
+                establishmentDate: finalFormData.establishmentDate,
+                ageOfInstitution: getAgeInYearsAndMonths(date)
+            })
+            console.log('---')
+            console.log('Head of Institution:', {
+                headOfInstitution: finalFormData.headOfInstitution,
+                designation: finalFormData.designation
+            })
+            console.log('---')
+            console.log('Campus Information:', {
+                ownCampus: finalFormData.ownCampus,
+                address: finalFormData.address,
+                state: finalFormData.state,
+                district: finalFormData.district,
+                city: finalFormData.city,
+                pin: finalFormData.pin
+            })
+            console.log('---')
+            console.log('Contact Information:', {
+                phoneNo: finalFormData.phoneNo,
+                faxNo: finalFormData.faxNo,
+                mobileNo: finalFormData.mobileNo,
+                email: finalFormData.email,
+                alternateEmail: finalFormData.alternateEmail,
+                website: finalFormData.website
+            })
+            console.log('---')
+            console.log('Alternate Faculty Contact:', {
+                alternateFacultyName: finalFormData.alternateFacultyName,
+                alternateAddress: finalFormData.alternateAddress,
+                alternateState: finalFormData.alternateState,
+                alternateDistrict: finalFormData.alternateDistrict,
+                alternateCity: finalFormData.alternateCity,
+                alternatePin: finalFormData.alternatePin,
+                alternatePhoneNo: finalFormData.alternatePhoneNo,
+                alternateFaxNo: finalFormData.alternateFaxNo,
+                alternateMobileNo: finalFormData.alternateMobileNo,
+                alternateFacultyEmail: finalFormData.alternateFacultyEmail,
+                alternateFacultyAlternateEmail: finalFormData.alternateFacultyAlternateEmail
+            })
+            console.log('---')
+            console.log('Summary:')
+            console.log(`- Age of Institution: ${getAgeInYearsAndMonths(date)}`)
+            console.log(`- Has Alternate Faculty: ${!!finalFormData.alternateFacultyName}`)
+            console.log(`- Total Fields: ${Object.keys(finalFormData).length}`)
+            console.log('=== END OF DATA ===')
+            
+            // TODO: Replace with actual API call
+            // const response = await fetch('/api/basic-eligibility', {
+            //   method: 'POST',
+            //   headers: {
+            //     'Content-Type': 'application/json',
+            //   },
+            //   body: JSON.stringify(completeData)
+            // })
+            
+            // if (!response.ok) {
+            //   throw new Error('Failed to save basic eligibility')
+            // }
+            
+            // const result = await response.json()
+            // console.log('Success:', result)
+            
+            // Simulate API call for now
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            console.log('✅ Basic eligibility saved successfully!')
+            
+        } catch (error) {
+            console.error('❌ Error saving basic eligibility:', error)
+            // TODO: Add proper error handling/notification
+        } finally {
+            setIsSubmitting(false)
         }
-        
-        console.log('Form Data:', finalFormData)
-        console.log('Age of Institution:', getAgeInYearsAndMonths(date))
     }
 
     return (
@@ -1465,7 +1591,7 @@ export const Basiceligibilty = () => {
                         <Button
                             variant="outline"
                             id="date"
-                            className="w-80 justify-between font-normal text-sm"
+                            className="w-80 justify-between font-light text-sm"
                         >
                             {date ? date.toLocaleDateString() : "Select date"}
                             <ChevronDownIcon />
@@ -1730,10 +1856,200 @@ export const Basiceligibilty = () => {
                 </p>
             </div>
 
+            {/* Alternate Faculty Contact Information Section */}
+            <div className="space-y-4 pt-6 ">
+                <h3 className="text-md font-semibold text-gray-800 mb-4">Alternate Faculty Contact Information</h3>
+                
+                {/* Alternate Faculty Name */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_Faculty_Name" className="text-sm font-medium w-40">
+                        Alternate Faculty Name (Ex. IQAC Coordinator/IQAC Director)
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_Faculty_Name" 
+                        placeholder="Enter Alternate Faculty Name" 
+                        className='w-80 text-sm'
+                        maxLength={255}
+                        value={formData.alternateFacultyName}
+                        onChange={(e) => handleInputChange('alternateFacultyName', e.target.value)}
+                    />
+                </div>
+
+                {/* Alternate Address */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_Address" className="text-sm font-medium w-40">
+                        Address
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_Address" 
+                        placeholder="Enter Address" 
+                        className='w-80 text-sm'
+                        maxLength={255}
+                        value={formData.alternateAddress}
+                        onChange={(e) => handleInputChange('alternateAddress', e.target.value)}
+                    />
+                </div>
+
+                {/* Alternate State Selector */}
+                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
+                    <label htmlFor="alternate_state" className="text-sm font-medium w-40">
+                        State/UT
+                    </label>
+                    <Select 
+                        onValueChange={handleAlternateStateChange}
+                        value={selectedAlternateState}
+                    >
+                        <SelectTrigger className="w-80 text-sm">
+                            <SelectValue placeholder="Select State/UT" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.keys(indiaData).map((state) => (
+                                <SelectItem key={state} value={state}>
+                                    {state}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Alternate District Selector */}
+                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
+                    <label htmlFor="alternate_district" className="text-sm font-medium w-40">
+                        District
+                    </label>
+                    <Select 
+                        disabled={!selectedAlternateState} 
+                        onValueChange={handleAlternateDistrictChange}
+                        value={selectedAlternateDistrict}
+                    >
+                        <SelectTrigger className="w-80 text-sm">
+                            <SelectValue placeholder={selectedAlternateState ? 'Select District' : 'Select State first'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {alternateDistricts.map((district) => (
+                                <SelectItem key={district} value={district}>
+                                    {district}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Alternate City */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_City" className="text-sm font-medium w-40">
+                        City 
+                    </label>
+                    <Input 
+                        id="Alternate_City" 
+                        placeholder="Enter City" 
+                        className='w-80 text-sm'
+                        value={formData.alternateCity}
+                        onChange={(e) => handleInputChange('alternateCity', e.target.value)}
+                    />
+                </div>
+
+                {/* Alternate Pin */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_Pin" className="text-sm font-medium w-40">
+                        Pin
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_Pin" 
+                        placeholder="Enter Pin" 
+                        className='w-80 text-sm' 
+                        value={formData.alternatePin}
+                        onChange={(e) => handleNumberInputChange('alternatePin', e.target.value, 6)}
+                    />
+                </div>
+                
+                {/* Alternate Phone No */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_PhoneNo" className="text-sm font-medium w-40">
+                        Phone No 
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_PhoneNo" 
+                        placeholder="Enter Phone No" 
+                        className='w-80 text-sm' 
+                        value={formData.alternatePhoneNo}
+                        onChange={(e) => handleInputChange('alternatePhoneNo', e.target.value)}
+                    />
+                </div>
+                  
+                {/* Alternate Fax No */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_FaxNo" className="text-sm font-medium w-40">
+                        Fax No 
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_FaxNo" 
+                        placeholder="Enter Fax No" 
+                        className='w-80 text-sm' 
+                        value={formData.alternateFaxNo}
+                        onChange={(e) => handleInputChange('alternateFaxNo', e.target.value)}
+                    />
+                </div>
+
+                {/* Alternate Mobile No */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_MobileNo" className="text-sm font-medium w-40">
+                        Mobile No
+                    </label>
+                    <Input 
+                        type='text' 
+                        id="Alternate_MobileNo" 
+                        placeholder="Enter Mobile No" 
+                        className='w-80 text-sm' 
+                        value={formData.alternateMobileNo}
+                        onChange={(e) => handleNumberInputChange('alternateMobileNo', e.target.value, 10)}
+                    />
+                </div>
+
+                {/* Alternate Faculty Email */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_Faculty_Email" className="text-sm font-medium w-40">
+                        Email 
+                    </label>
+                    <Input 
+                        type='email' 
+                        id="Alternate_Faculty_Email" 
+                        placeholder="Enter Email" 
+                        className='w-80 text-sm'
+                        value={formData.alternateFacultyEmail}
+                        onChange={(e) => handleInputChange('alternateFacultyEmail', e.target.value)}
+                    />
+                </div>
+
+                {/* Alternate Faculty Alternate Email */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                    <label htmlFor="Alternate_Faculty_Alternate_Email" className="text-sm font-medium w-40">
+                        Alternate Email 
+                    </label>
+                    <Input 
+                        type='email' 
+                        id="Alternate_Faculty_Alternate_Email" 
+                        placeholder="Enter Email" 
+                        className='w-80 text-sm'
+                        value={formData.alternateFacultyAlternateEmail}
+                        onChange={(e) => handleInputChange('alternateFacultyAlternateEmail', e.target.value)}
+                    />
+                </div>
+            </div>
+
             {/* Save Button */}
             <div className="flex justify-center pt-6 pb-4">
-                <Button type="submit" className="px-8 py-2 bg-black text-white">
-                    Save
+                <Button 
+                    type="submit" 
+                    className="px-8 py-2 bg-black text-white hover:bg-gray-800"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? 'Saving...' : 'Save'}
                 </Button>
             </div>
         </form>

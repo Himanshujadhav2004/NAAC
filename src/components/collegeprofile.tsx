@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Basiceligibilty } from "./collegeprofileui/basiceligibilty"
 import { Affiliationdetials } from "./collegeprofileui/affiliationdetials"
 import { Academicprograms } from "./collegeprofileui/academicprograms"
+import { Qualityinformation } from "./collegeprofileui/qualityinformation"
 
 function CollegeProfile() {
   return (
@@ -63,19 +64,14 @@ function CollegeProfile() {
         
         <TabsContent value="tab4" className="mt-6">
           <Card>
-            <CardHeader>
+            {/* <CardHeader>
               <CardTitle>Research & Innovation</CardTitle>
               <CardDescription>
                 Details about research initiatives and innovation programs
               </CardDescription>
-            </CardHeader>
+            </CardHeader> */}
             <CardContent className="space-y-4">
-              <p className="text-gray-700 leading-relaxed">
-                The college is committed to fostering a culture of research and innovation. Our research centers focus on cutting-edge technologies including artificial intelligence, renewable energy, biotechnology, and sustainable development. Faculty and students collaborate on projects that address real-world challenges and contribute to scientific advancement.
-              </p>
-              <p className="text-gray-700 leading-relaxed">
-                We have established partnerships with leading industries and research institutions worldwide, providing students with opportunities to work on collaborative projects and gain exposure to global research practices. The college regularly publishes research papers in reputed journals and presents findings at international conferences.
-              </p>
+           <Qualityinformation></Qualityinformation>
             </CardContent>
           </Card>
         </TabsContent>

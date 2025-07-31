@@ -337,7 +337,7 @@ export const Affiliationdetials = () => {
 
   return (
     <div className="w-full max-w-4xl mx-auto max-h-[80vh] flex flex-col">
-      <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4">
+      <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                  {/* Nature of College Section */}
          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
            <Label className="text-sm font-medium w-40">
