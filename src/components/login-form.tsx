@@ -23,6 +23,7 @@ export function LoginForm({
   const router = useRouter();
 
   const [email, setEmail] = useState("");
+  const[collegeId, setCollegeId] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -34,10 +35,11 @@ export function LoginForm({
 
     try {
       const response = await axios.post(
-        "https://rk09x7vo2l.execute-api.ap-south-1.amazonaws.com/dev/login",
+        "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login",
         {
           userName: email,
           password: password,
+          collegeId: collegeId, // Include collegeId in the request
         }
       );
 
@@ -46,6 +48,7 @@ export function LoginForm({
       // Store token and username in localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("userName", userName || email);
+      localStorage.setItem("collegeId", collegeId || email);
 
       console.log("✅ Login successful:", message);
       router.push("/dashboard"); // Redirect to dashboard
@@ -83,6 +86,17 @@ export function LoginForm({
                 />
               </div>
               <div className="grid gap-3">
+                <Label htmlFor="collegeId">College Id</Label>
+                <Input
+                  id="collegeId"
+                  type="email"
+                  placeholder="college@example.com"
+                  value={collegeId}
+                  onChange={(e) => setCollegeId(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="grid gap-3">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                   <Link
@@ -100,6 +114,7 @@ export function LoginForm({
                   required
                 />
               </div>
+              
               {errorMsg && (
                 <p className="text-sm text-red-500 text-center">{errorMsg}</p>
               )}

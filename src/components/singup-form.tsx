@@ -15,16 +15,24 @@ import Link from 'next/link';
 import axios from 'axios'
 import { useState } from "react"
 
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [collegeId ,setcollegeId]=useState('');
+  const[role,setrole]=useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const handleroleChange = (value: string) => {
+    setrole(value)
+  }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -36,9 +44,11 @@ export function SignupForm({
     }
 
     try {
-      const response = await axios.post('https://rk09x7vo2l.execute-api.ap-south-1.amazonaws.com/dev/register', {
+      const response = await axios.post('https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/register', {
         userName: email,   // your API expects "userName"
-        password: password
+        password: password,
+        collegeId: collegeId, // your API expects "collegeId"
+        role: role // your API expects "role"
       });
 
       setSuccess(response.data.message || "User registered successfully!");
@@ -91,6 +101,35 @@ export function SignupForm({
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
+               <div className="grid gap-3">
+                <Label htmlFor="collegeId">collegeId</Label>
+                <Input
+                  id="collegeId"
+                  type="email"
+                  placeholder="college@example.com"
+                  required
+                  value={collegeId}
+                  onChange={(e) => setcollegeId(e.target.value)}
+                />
+              </div>
+
+                 <div className="grid gap-3">
+            <Label className="text-sm font-medium w-40">
+              Select Role
+            </Label>
+            <Select 
+              value={role}
+              onValueChange={handleroleChange}
+            >
+              <SelectTrigger className="w-80 text-sm">
+                <SelectValue placeholder="Select Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SuperAdmin">Super Admin</SelectItem>
+                <SelectItem value="Co-ordinator">Co-ordinator</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
               {error && <p className="text-red-600 text-sm">{error}</p>}
               {success && <p className="text-green-600 text-center text-sm">{success}</p>}
               <div className="flex flex-col gap-3">

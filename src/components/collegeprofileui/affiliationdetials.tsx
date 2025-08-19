@@ -39,6 +39,7 @@ interface AffiliationFormData {
   sraProgramList: SRAProgram[]
   aiuRecognition: string
   aiuDocument: File | null
+  id:string
 }
 
 export const Affiliationdetials = () => {
@@ -291,7 +292,8 @@ export const Affiliationdetials = () => {
       sraPrograms: sraPrograms,
       sraProgramList: sraProgramList,
       aiuRecognition: aiuRecognition,
-      aiuDocument: aiuDocument
+      aiuDocument: aiuDocument,
+      id:"CPT2"
     }
   }
 

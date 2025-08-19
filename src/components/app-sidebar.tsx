@@ -67,8 +67,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   useEffect(() => {
     // Get username from localStorage
     const storedUserName = localStorage.getItem("userName")
-    if (storedUserName) {
-      setUserName(storedUserName)
+    const collegeId = localStorage.getItem("collegeId");
+    if (collegeId) {
+      setUserName(collegeId)
     }
   }, [])
 

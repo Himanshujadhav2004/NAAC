@@ -218,40 +218,13 @@ export const Qualityinformation = () => {
       // Prepare complete data object
       const completeData = {
         qualityInformation: formData,
-        timestamp: new Date().toISOString(),
-        summary: {
-          totalTeachingStaff: formData.teachingStaff.total,
-          totalNonTeachingStaff: formData.nonTeachingStaff.total,
-          totalStudents: formData.studentsOnRoll.total,
-          activeCommittees: Object.values(formData.statutoryCommittees).filter(Boolean).length
-        }
+    
       }
       
       // Log all data to console
-      console.log('=== QUALITY INFORMATION FORM DATA ===')
+
       console.log('Complete Form Data:', completeData)
-      console.log('---')
-      console.log('Teaching Staff:', formData.teachingStaff)
-      console.log('Non-Teaching Staff:', formData.nonTeachingStaff)
-      console.log('Students on Roll:', formData.studentsOnRoll)
-      console.log('---')
-      console.log('Statutory Committees:', formData.statutoryCommittees)
-      console.log('---')
-      console.log('Other Information:')
-      console.log(`- IQAC Establishment Date: ${formData.iqacEstablishmentDate}`)
-      console.log(`- RTI Declaration: ${formData.rtiDeclaration}`)
-      console.log(`- RTI Declaration URL: ${formData.rtiDeclarationUrl}`)
-      console.log(`- Academic MoU: ${formData.academicMou}`)
-      console.log(`- Academic MoU Document: ${formData.academicMouDocument?.name || 'Not uploaded'}`)
-      console.log(`- AISHE Upload Date: ${formData.aisheUploadDate}`)
-      console.log(`- Certification Document: ${formData.certificationDocument?.name || 'Not uploaded'}`)
-      console.log('---')
-      console.log('Summary:')
-      console.log(`- Total Teaching Staff: ${formData.teachingStaff.total}`)
-      console.log(`- Total Non-Teaching Staff: ${formData.nonTeachingStaff.total}`)
-      console.log(`- Total Students: ${formData.studentsOnRoll.total}`)
-      console.log(`- Active Committees: ${completeData.summary.activeCommittees}`)
-      console.log('=== END OF DATA ===')
+   
       
       // TODO: Replace with actual API call
       // const response = await fetch('/api/quality-information', {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Checkbox } from '../ui/checkbox'
@@ -12,6 +12,42 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import axios from 'axios'
+
+interface CollegeFormData {
+  collegeAISHEID: string;
+  cycleOfAccreditation: string;
+  collegeName: string;
+  establishmentDate: string;
+  headOfInstitution: string;
+  designation: string;
+  ownCampus: string;
+  address: string;
+  state: string;
+  district: string;
+  city: string;
+  pin: string;
+  phoneNo: string;
+  faxNo: string;
+  mobileNo: string;
+  email: string;
+  alternateEmail: string;
+  website: string;
+
+
+  // Alternate Faculty Contact
+  alternateFacultyName: string;
+  alternateAddress: string;
+  alternateState: string;
+  alternateDistrict: string;
+  alternateCity: string;
+  alternatePin: string;
+  alternatePhoneNo: string;
+  alternateFaxNo: string;
+  alternateMobileNo: string;
+  alternateFacultyEmail: string;
+  alternateFacultyAlternateEmail: string;
+}
 
 
 export const Basiceligibilty = () => {
@@ -26,6 +62,7 @@ export const Basiceligibilty = () => {
     const [selectedAlternateDistrict, setSelectedAlternateDistrict] = useState('')
     const [alternateDistricts, setAlternateDistricts] = useState<string[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [fetchedData, setFetchedData] = useState<any>(null);
     
     // Nature of college selections
     const [natureSelections, setNatureSelections] = useState({
@@ -36,39 +73,40 @@ export const Basiceligibilty = () => {
     })
     
     // Form state
-    const [formData, setFormData] = useState({
-        collegeAISHEID: '',
-        cycleOfAccreditation: '',
-        collegeName: '',
-        establishmentDate: '',
-        headOfInstitution: '',
-        designation: '',
-        ownCampus: '',
-        address: '',
-        state: '',
-        district: '',
-        city: '',
-        pin: '',
-        phoneNo: '',
-        faxNo: '',
-        mobileNo: '',
-        email: '',
-        alternateEmail: '',
-        website: '',
-        natureOfCollege: [] as string[],
-        // Alternate Faculty Contact Information
-        alternateFacultyName: '',
-        alternateAddress: '',
-        alternateState: '',
-        alternateDistrict: '',
-        alternateCity: '',
-        alternatePin: '',
-        alternatePhoneNo: '',
-        alternateFaxNo: '',
-        alternateMobileNo: '',
-        alternateFacultyEmail: '',
-        alternateFacultyAlternateEmail: ''
-    })
+    const [formData, setFormData] = useState<CollegeFormData>({
+  collegeAISHEID: '',
+  cycleOfAccreditation: '',
+  collegeName: '',
+  establishmentDate: '',
+  headOfInstitution: '',
+  designation: '',
+  ownCampus: '',
+  address: '',
+  state: '',
+  district: '',
+  city: '',
+  pin: '',
+  phoneNo: '',
+  faxNo: '',
+  mobileNo: '',
+  email: '',
+  alternateEmail: '',
+  website: '',
+
+
+  alternateFacultyName: '',
+  alternateAddress: '',
+  alternateState: '',
+  alternateDistrict: '',
+  alternateCity: '',
+  alternatePin: '',
+  alternatePhoneNo: '',
+  alternateFaxNo: '',
+  alternateMobileNo: '',
+  alternateFacultyEmail: '',
+  alternateFacultyAlternateEmail: ''
+});
+
 
     const indiaData = {
 
@@ -1358,6 +1396,7 @@ export const Basiceligibilty = () => {
             "Adra"
         ]
     }
+
     const handleStateChange = (value: string) => {
         setSelectedState(value)
         setSelectedDistrict('') // Reset district when state changes
@@ -1423,97 +1462,123 @@ export const Basiceligibilty = () => {
             setIsSubmitting(true)
             
             // Update form data with current state values
-            const finalFormData = {
+            const completeData = {
                 ...formData,
+                id:"CPT1",
                 state: selectedState,
                 district: selectedDistrict,
                 alternateState: selectedAlternateState,
-                alternateDistrict: selectedAlternateDistrict
+                alternateDistrict: selectedAlternateDistrict,
+ ageOfInstitution: getAgeInYearsAndMonths(date)
             }
             
             // Prepare complete data object
-            const completeData = {
-                basicEligibility: finalFormData,
-                timestamp: new Date().toISOString(),
-                ageOfInstitution: getAgeInYearsAndMonths(date),
-                summary: {
-                    hasAlternateFaculty: !!finalFormData.alternateFacultyName,
-                    totalFields: Object.keys(finalFormData).length
-                }
-            }
+            
             
             // Log all data to console
             console.log('=== BASIC ELIGIBILITY FORM DATA ===')
             console.log('Complete Form Data:', completeData)
-            console.log('---')
-            console.log('College Information:', {
-                collegeAISHEID: finalFormData.collegeAISHEID,
-                cycleOfAccreditation: finalFormData.cycleOfAccreditation,
-                collegeName: finalFormData.collegeName,
-                establishmentDate: finalFormData.establishmentDate,
-                ageOfInstitution: getAgeInYearsAndMonths(date)
-            })
-            console.log('---')
-            console.log('Head of Institution:', {
-                headOfInstitution: finalFormData.headOfInstitution,
-                designation: finalFormData.designation
-            })
-            console.log('---')
-            console.log('Campus Information:', {
-                ownCampus: finalFormData.ownCampus,
-                address: finalFormData.address,
-                state: finalFormData.state,
-                district: finalFormData.district,
-                city: finalFormData.city,
-                pin: finalFormData.pin
-            })
-            console.log('---')
-            console.log('Contact Information:', {
-                phoneNo: finalFormData.phoneNo,
-                faxNo: finalFormData.faxNo,
-                mobileNo: finalFormData.mobileNo,
-                email: finalFormData.email,
-                alternateEmail: finalFormData.alternateEmail,
-                website: finalFormData.website
-            })
-            console.log('---')
-            console.log('Alternate Faculty Contact:', {
-                alternateFacultyName: finalFormData.alternateFacultyName,
-                alternateAddress: finalFormData.alternateAddress,
-                alternateState: finalFormData.alternateState,
-                alternateDistrict: finalFormData.alternateDistrict,
-                alternateCity: finalFormData.alternateCity,
-                alternatePin: finalFormData.alternatePin,
-                alternatePhoneNo: finalFormData.alternatePhoneNo,
-                alternateFaxNo: finalFormData.alternateFaxNo,
-                alternateMobileNo: finalFormData.alternateMobileNo,
-                alternateFacultyEmail: finalFormData.alternateFacultyEmail,
-                alternateFacultyAlternateEmail: finalFormData.alternateFacultyAlternateEmail
-            })
-            console.log('---')
-            console.log('Summary:')
-            console.log(`- Age of Institution: ${getAgeInYearsAndMonths(date)}`)
-            console.log(`- Has Alternate Faculty: ${!!finalFormData.alternateFacultyName}`)
-            console.log(`- Total Fields: ${Object.keys(finalFormData).length}`)
-            console.log('=== END OF DATA ===')
-            
-            // TODO: Replace with actual API call
-            // const response = await fetch('/api/basic-eligibility', {
-            //   method: 'POST',
-            //   headers: {
-            //     'Content-Type': 'application/json',
-            //   },
-            //   body: JSON.stringify(completeData)
+            // console.log('---')
+            // console.log('College Information:', {
+            //     collegeAISHEID: finalFormData.collegeAISHEID,
+            //     cycleOfAccreditation: finalFormData.cycleOfAccreditation,
+            //     collegeName: finalFormData.collegeName,
+            //     establishmentDate: finalFormData.establishmentDate,
+            //     ageOfInstitution: getAgeInYearsAndMonths(date)
             // })
-            
-            // if (!response.ok) {
-            //   throw new Error('Failed to save basic eligibility')
-            // }
-            
-            // const result = await response.json()
-            // console.log('Success:', result)
-            
-            // Simulate API call for now
+            // console.log('---')
+            // console.log('Head of Institution:', {
+            //     headOfInstitution: finalFormData.headOfInstitution,
+            //     designation: finalFormData.designation
+            // })
+            // console.log('---')
+            // console.log('Campus Information:', {
+            //     ownCampus: finalFormData.ownCampus,
+            //     address: finalFormData.address,
+            //     state: finalFormData.state,
+            //     district: finalFormData.district,
+            //     city: finalFormData.city,
+            //     pin: finalFormData.pin
+            // })
+            // console.log('---')
+            // console.log('Contact Information:', {
+            //     phoneNo: finalFormData.phoneNo,
+            //     faxNo: finalFormData.faxNo,
+            //     mobileNo: finalFormData.mobileNo,
+            //     email: finalFormData.email,
+            //     alternateEmail: finalFormData.alternateEmail,
+            //     website: finalFormData.website
+            // })
+            // console.log('---')
+            // console.log('Alternate Faculty Contact:', {
+            //     alternateFacultyName: finalFormData.alternateFacultyName,
+            //     alternateAddress: finalFormData.alternateAddress,
+            //     alternateState: finalFormData.alternateState,
+            //     alternateDistrict: finalFormData.alternateDistrict,
+            //     alternateCity: finalFormData.alternateCity,
+            //     alternatePin: finalFormData.alternatePin,
+            //     alternatePhoneNo: finalFormData.alternatePhoneNo,
+            //     alternateFaxNo: finalFormData.alternateFaxNo,
+            //     alternateMobileNo: finalFormData.alternateMobileNo,
+            //     alternateFacultyEmail: finalFormData.alternateFacultyEmail,
+            //     alternateFacultyAlternateEmail: finalFormData.alternateFacultyAlternateEmail
+            // })
+            // console.log('---')
+            // console.log('Summary:')
+            // console.log(`- Age of Institution: ${getAgeInYearsAndMonths(date)}`)
+            // console.log(`- Has Alternate Faculty: ${!!finalFormData.alternateFacultyName}`)
+            // console.log(`- Total Fields: ${Object.keys(finalFormData).length}`)
+            // console.log('=== END OF DATA ===')
+  const token = localStorage.getItem("token"); // or sessionStorage, depending on how you store it
+
+const response = await axios.post(
+  "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers",
+  {
+    questionId: "iiqa4",
+    answer: {
+      collegeAISHEID: completeData.collegeAISHEID,
+      cycleOfAccreditation: completeData.cycleOfAccreditation,
+      collegeName: completeData.collegeName,
+      establishmentDate: completeData.establishmentDate,
+      ageOfInstitution: getAgeInYearsAndMonths(date),
+      headOfInstitution: completeData.headOfInstitution,
+      designation: completeData.designation,
+      ownCampus: completeData.ownCampus,
+      address: completeData.address,
+      state: completeData.state,
+      district: completeData.district,
+      city: completeData.city,
+      pin: completeData.pin,
+      phoneNo: completeData.phoneNo,
+      faxNo: completeData.faxNo,
+      mobileNo: completeData.mobileNo,
+      email: completeData.email,
+      alternateEmail: completeData.alternateEmail,
+      website: completeData.website,
+      alternateFacultyName: completeData.alternateFacultyName,
+      alternateAddress: completeData.alternateAddress,
+      alternateState: completeData.alternateState,
+      alternateDistrict: completeData.alternateDistrict,
+      alternateCity: completeData.alternateCity,
+      alternatePin: completeData.alternatePin,
+      alternatePhoneNo: completeData.alternatePhoneNo,
+      alternateFaxNo: completeData.alternateFaxNo,
+      alternateMobileNo: completeData.alternateMobileNo,
+      alternateFacultyEmail: completeData.alternateFacultyEmail,
+      alternateFacultyAlternateEmail:
+        completeData.alternateFacultyAlternateEmail,
+    },
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`, // 🔑 send token
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+console.log(response.data.message || "User data has been saved successfully!");
+
             await new Promise(resolve => setTimeout(resolve, 1000))
             console.log('✅ Basic eligibility saved successfully!')
             
@@ -1524,6 +1589,65 @@ export const Basiceligibilty = () => {
             setIsSubmitting(false)
         }
     }
+
+useEffect(() => {
+  const fetchAnswers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const collegeId = localStorage.getItem("collegeId");
+
+      const response = await axios.get(
+        `https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers/${collegeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = response.data[0];
+      setFetchedData(data); // 👈 store in state
+
+      if (data && data.answer) {
+        setFormData(data.answer);
+
+        if (data.answer.establishmentDate) {
+          setDate(new Date(data.answer.establishmentDate));
+        }
+
+        if (data.answer.state) {
+          setSelectedState(data.answer.state);
+          setDistricts(indiaData[data.answer.state as keyof typeof indiaData] || []);
+        }
+
+        if (data.answer.alternateState) {
+          setSelectedAlternateState(data.answer.alternateState);
+          setAlternateDistricts(indiaData[data.answer.alternateState as keyof typeof indiaData] || []);
+        }
+      }
+
+      console.log("📥 Retrieved data:", data);
+    } catch (error) {
+      console.error("❌ Error fetching answers:", error);
+    }
+  };
+
+  fetchAnswers();
+}, []);
+
+// ✅ Auto select district when districts are populated
+useEffect(() => {
+  if (districts.length > 0 && fetchedData?.answer?.district) {
+    setSelectedDistrict(fetchedData.answer.district);
+  }
+}, [districts, fetchedData]);
+
+// ✅ Auto select alternate district
+useEffect(() => {
+  if (alternateDistricts.length > 0 && fetchedData?.answer?.alternateDistrict) {
+    setSelectedAlternateDistrict(fetchedData.answer.alternateDistrict);
+  }
+}, [alternateDistricts, fetchedData]);
 
     return (
         <div className="w-full max-w-4xl mx-auto max-h-[80vh] flex flex-col">
@@ -1727,6 +1851,8 @@ export const Basiceligibilty = () => {
                         ))}
                     </SelectContent>
                 </Select>
+ 
+
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <label htmlFor="City" className="text-sm font-medium w-40">
