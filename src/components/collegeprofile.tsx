@@ -22,12 +22,6 @@ function CollegeProfile() {
         
         <TabsContent value="tab1" className="mt-6">
           <Card>
-            {/* <CardHeader>
-              <CardTitle>Academic Information</CardTitle>
-              <CardDescription>
-             
-              </CardDescription>
-            </CardHeader> */}
             <CardContent className="w-full">
               <Basiceligibilty></Basiceligibilty>
             </CardContent>
@@ -36,12 +30,6 @@ function CollegeProfile() {
         
         <TabsContent value="tab2" className="mt-6">
           <Card>
-            {/* <CardHeader>
-              <CardTitle>Infrastructure & Facilities</CardTitle>
-              <CardDescription>
-                Overview of campus facilities and infrastructure
-              </CardDescription>
-            </CardHeader> */}
             <CardContent className="w-full">
           <Affiliationdetials></Affiliationdetials>
             </CardContent>
@@ -50,12 +38,7 @@ function CollegeProfile() {
         
         <TabsContent value="tab3" className="mt-6">
           <Card>
-            {/* <CardHeader>
-              <CardTitle>Student Life & Activities</CardTitle>
-              <CardDescription>
-                Information about student organizations and extracurricular activities
-              </CardDescription>
-            </CardHeader> */}
+      
             <CardContent className="w-full">
              <Academicprograms></Academicprograms>
             </CardContent>
@@ -64,12 +47,7 @@ function CollegeProfile() {
         
         <TabsContent value="tab4" className="mt-6">
           <Card>
-            {/* <CardHeader>
-              <CardTitle>Research & Innovation</CardTitle>
-              <CardDescription>
-                Details about research initiatives and innovation programs
-              </CardDescription>
-            </CardHeader> */}
+     
             <CardContent className="space-y-4">
            <Qualityinformation></Qualityinformation>
             </CardContent>

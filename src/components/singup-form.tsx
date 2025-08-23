@@ -33,30 +33,51 @@ export function SignupForm({
   const handleroleChange = (value: string) => {
     setrole(value)
   }
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setSuccess('');
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    try {
-      const response = await axios.post('https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/register', {
-        userName: email,   // your API expects "userName"
-        password: password,
-        collegeId: collegeId, // your API expects "collegeId"
-        role: role // your API expects "role"
-      });
-
-      setSuccess(response.data.message || "User registered successfully!");
-    } catch (err: any) {
-      console.error("Signup error", err);
-      setError("Registration failed. Check CORS or API issue.");
-    }
+  if (password !== confirmPassword) {
+    setError("Passwords do not match");
+    return;
   }
+
+  try {
+    const response = await axios.post(
+      'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/register',
+      {
+        userName: email,
+        password: password,
+        collegeId: collegeId,
+        role: role
+      }
+    );
+
+    setSuccess(response.data.message || "User registered successfully!");
+console.log("Signup response", response.data.qrCodeUrl);
+    // ✅ If QR code is in response, open it in new tab
+    if (response.data.qrCodeUrl) {
+  const newTab = window.open("", "_blank"); // open blank tab right away
+  if (newTab) {
+    newTab.document.write(`
+      <html>
+        <head><title>QR Code</title></head>
+        <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;">
+          <img src="${response.data.qrCodeUrl}" alt="QR Code" style="max-width:100%;height:auto;" />
+        </body>
+      </html>
+    `);
+    newTab.document.close();
+  }
+}
+
+  } catch (err: any) {
+    console.error("Signup error", err);
+    setError("Registration failed. Check CORS or API issue.");
+  }
+};
+
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>

@@ -1401,12 +1401,12 @@ export const Basiceligibilty = () => {
         setSelectedState(value)
         setSelectedDistrict('') // Reset district when state changes
         setDistricts(indiaData[value as keyof typeof indiaData] || [])
-        setFormData(prev => ({ ...prev, state: value, district: '' }))
+        setFormData(prev => ({ ...prev, state: value || '', district: '' }))
     }
 
     const handleDistrictChange = (value: string) => {
         setSelectedDistrict(value)
-        setFormData(prev => ({ ...prev, district: value }))
+        setFormData(prev => ({ ...prev, district: value || '' }))
     }
 
     // Alternate Faculty Contact Handlers
@@ -1414,30 +1414,30 @@ export const Basiceligibilty = () => {
         setSelectedAlternateState(value)
         setSelectedAlternateDistrict('') // Reset district when state changes
         setAlternateDistricts(indiaData[value as keyof typeof indiaData] || [])
-        setFormData(prev => ({ ...prev, alternateState: value, alternateDistrict: '' }))
+        setFormData(prev => ({ ...prev, alternateState: value || '', alternateDistrict: '' }))
     }
 
     const handleAlternateDistrictChange = (value: string) => {
         setSelectedAlternateDistrict(value)
-        setFormData(prev => ({ ...prev, alternateDistrict: value }))
+        setFormData(prev => ({ ...prev, alternateDistrict: value || '' }))
     }
 
     const handleInputChange = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+        setFormData(prev => ({ ...prev, [field]: value || '' }))
     }
 
     const handleNumberInputChange = (field: string, value: string, maxLength: number) => {
         // Only allow digits and limit length
         const numericValue = value.replace(/[^0-9]/g, '')
         if (numericValue.length <= maxLength) {
-            setFormData(prev => ({ ...prev, [field]: numericValue }))
+            setFormData(prev => ({ ...prev, [field]: numericValue || '' }))
         }
     }
 
     const handleDateChange = (selectedDate: Date | undefined) => {
         setDate(selectedDate)
         const dateString = selectedDate ? selectedDate.toISOString().split('T')[0] : ''
-        setFormData(prev => ({ ...prev, establishmentDate: dateString }))
+        setFormData(prev => ({ ...prev, establishmentDate: dateString || '' }))
     }
 
     const getAgeInYearsAndMonths = (selectedDate?: Date) => {
@@ -1533,8 +1533,9 @@ export const Basiceligibilty = () => {
 
 const response = await axios.post(
   "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers",
+
   {
-    questionId: "iiqa4",
+    questionId: "iiqa1",
     answer: {
       collegeAISHEID: completeData.collegeAISHEID,
       cycleOfAccreditation: completeData.cycleOfAccreditation,
@@ -1594,10 +1595,10 @@ useEffect(() => {
   const fetchAnswers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const collegeId = localStorage.getItem("collegeId");
+    //   const collegeId = localStorage.getItem("collegeId");
 
       const response = await axios.get(
-        `https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers/${collegeId}`,
+        `https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1609,7 +1610,12 @@ useEffect(() => {
       setFetchedData(data); // 👈 store in state
 
       if (data && data.answer) {
-        setFormData(data.answer);
+        // Ensure all fields have defined values to prevent controlled/uncontrolled input errors
+        const sanitizedAnswer = Object.keys(formData).reduce((acc, key) => {
+          acc[key] = data.answer[key] || '';
+          return acc;
+        }, {} as any);
+        setFormData(sanitizedAnswer);
 
         if (data.answer.establishmentDate) {
           setDate(new Date(data.answer.establishmentDate));
@@ -1650,7 +1656,7 @@ useEffect(() => {
 }, [alternateDistricts, fetchedData]);
 
     return (
-        <div className="w-full max-w-4xl mx-auto max-h-[80vh] flex flex-col">
+        <div className="w-full max-w-4xl mx-auto  flex flex-col">
             <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {/* First field */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
@@ -1768,7 +1774,7 @@ useEffect(() => {
                     <SelectContent>
                         <SelectItem value="Principal">Principal</SelectItem>
                         <SelectItem value="Director">Director</SelectItem>
-                        <SelectItem value="Principal_In_charge">Principal In charge</SelectItem>
+                        <SelectItem value="Principal In charge">Principal In charge</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -1812,21 +1818,24 @@ useEffect(() => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <label className="text-sm font-medium w-40">State / Union Territory</label>
                 <Select 
-                    required 
-                    onValueChange={handleStateChange}
-                    value={selectedState}
-                >
-                    <SelectTrigger className="w-80 text-sm">
-                        <SelectValue placeholder="Select State/UT" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {Object.keys(indiaData).map((state) => (
-                            <SelectItem key={state} value={state}>
-                                {state}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+  required 
+  onValueChange={handleStateChange}
+  value={selectedState}
+>
+  <SelectTrigger className="w-80 text-sm">
+    <SelectValue placeholder="Select State/UT" />
+  </SelectTrigger>
+  <SelectContent>
+    {Object.keys(indiaData)
+      .sort((a, b) => a.localeCompare(b)) // sorts alphabetically
+      .map((state) => (
+        <SelectItem key={state} value={state}>
+          {state}
+        </SelectItem>
+      ))}
+  </SelectContent>
+</Select>
+
             </div>
 
             {/* District Selector */}
