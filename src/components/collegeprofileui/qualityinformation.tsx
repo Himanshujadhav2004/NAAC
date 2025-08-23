@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -10,6 +10,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import axios from 'axios'
 
 // TypeScript interfaces for type safety
 interface StaffCounts {
@@ -44,9 +45,105 @@ interface QualityInformationFormData {
   rtiDeclarationUrl: string
   academicMou: string
   academicMouDocument: File | null
+  academicMouDocumentUrl?: string
   aisheUploadDate: string
   certificationDocument: File | null
+  certificationDocumentUrl?: string
+  id: string
 }
+
+// S3 Upload utility function
+const uploadFileToS3 = async (file: File): Promise<string | null> => {
+  try {
+    console.log('Starting file upload for:', file.name);
+    
+    const response = await axios.get(
+      "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/upload-url",
+      {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    console.log('Upload URL response:', response.data);
+    const { uploadUrl, fileUrl } = response.data;
+
+    if (!uploadUrl || !fileUrl) {
+      throw new Error('Invalid response from upload URL endpoint');
+    }
+
+    await axios.put(uploadUrl, file, {
+      headers: {
+        "Content-Type": file.type,
+      },
+      timeout: 60000,
+      onUploadProgress: (progressEvent) => {
+        if (typeof progressEvent.total === 'number' && progressEvent.total > 0) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`Upload progress: ${percentCompleted}%`);
+        }
+      }
+    });
+
+    console.log('File uploaded successfully. File URL:', fileUrl);
+    return fileUrl;
+  } catch (error) {
+    console.error("S3 upload failed:", error);
+    
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
+      throw new Error(`Network error while uploading ${file.name}. Please check your internet connection.`);
+    } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
+      throw new Error(`Upload timeout for ${file.name}. Please try again.`);
+    } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      const err = error as any;
+      throw new Error(`Upload failed for ${file.name}: ${err.response.status} ${err.response.statusText}`);
+    } else if (error instanceof Error) {
+      throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+    } else {
+      throw new Error(`Failed to upload ${file.name}: Unknown error`);
+    }
+  }
+};
+
+// Function to fetch existing form data
+const fetchExistingData = async (questionId: string): Promise<QualityInformationFormData | null> => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.log('No token found, starting with empty form');
+      return null;
+    }
+
+    const response = await axios.get(
+      'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers?questionId=iiqa4',
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    console.log("GET response:", response.data);
+    const allAnswers = response.data;
+
+    const iiqa4Data = allAnswers.find((item: { questionId: string }) => item.questionId === "iiqa4");
+
+    if (iiqa4Data && iiqa4Data.answer) {
+      console.log("iiqa4 answer:", iiqa4Data.answer);
+      return iiqa4Data.answer;
+    } else {
+      console.log("No data found for iiqa4");
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching existing data:', error);
+    return null;
+  }
+};
 
 // Helper to validate integer input
 const validateIntInput = (value: string) => {
@@ -67,6 +164,8 @@ const calculateTotal = (male: string, female: string, transgender: string) => {
 export const Qualityinformation = () => {
   // State management
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [uploadProgress, setUploadProgress] = useState<string>('')
   
   // Date popover states
   const [iqacDateOpen, setIqacDateOpen] = useState(false)
@@ -101,55 +200,197 @@ export const Qualityinformation = () => {
   const [rtiDeclarationUrl, setRtiDeclarationUrl] = useState('')
   const [academicMou, setAcademicMou] = useState('')
   const [academicMouDocument, setAcademicMouDocument] = useState<File | null>(null)
+  const [academicMouDocumentUrl, setAcademicMouDocumentUrl] = useState<string>('')
   const [certificationDocument, setCertificationDocument] = useState<File | null>(null)
+  const [certificationDocumentUrl, setCertificationDocumentUrl] = useState<string>('')
+
+  // Load existing data on component mount
+  useEffect(() => {
+    const loadExistingData = async () => {
+      try {
+        setIsLoading(true);
+        const existingData = await fetchExistingData("iiqa4");
+        
+        if (existingData) {
+          console.log("Loading existing data:", existingData);
+          
+          // Populate teaching staff data
+          setTeachingStaffMale(existingData.teachingStaff?.male || '');
+          setTeachingStaffFemale(existingData.teachingStaff?.female || '');
+          setTeachingStaffTransgender(existingData.teachingStaff?.transgender || '');
+          
+          // Populate non-teaching staff data
+          setNonTeachingStaffMale(existingData.nonTeachingStaff?.male || '');
+          setNonTeachingStaffFemale(existingData.nonTeachingStaff?.female || '');
+          setNonTeachingStaffTransgender(existingData.nonTeachingStaff?.transgender || '');
+          
+          // Populate student data
+          setStudentsMale(existingData.studentsOnRoll?.male || '');
+          setStudentsFemale(existingData.studentsOnRoll?.female || '');
+          setStudentsTransgender(existingData.studentsOnRoll?.transgender || '');
+          
+          // Populate statutory committees
+          if (existingData.statutoryCommittees) {
+            setScStCommittee(existingData.statutoryCommittees.scStCommittee || false);
+            setMinorityCell(existingData.statutoryCommittees.minorityCell || false);
+            setGrievanceRedressalCommittee(existingData.statutoryCommittees.grievanceRedressalCommittee || false);
+            setInternalComplaintsCommittee(existingData.statutoryCommittees.internalComplaintsCommittee || false);
+            setObcCell(existingData.statutoryCommittees.obcCell || false);
+          }
+          
+          // Populate dates
+          if (existingData.iqacEstablishmentDate) {
+            setIqacDate(new Date(existingData.iqacEstablishmentDate));
+          }
+          if (existingData.aisheUploadDate) {
+            setAisheDate(new Date(existingData.aisheUploadDate));
+          }
+          
+          // Populate other fields
+          setRtiDeclaration(existingData.rtiDeclaration || '');
+          setRtiDeclarationUrl(existingData.rtiDeclarationUrl || '');
+          setAcademicMou(existingData.academicMou || '');
+          setAcademicMouDocumentUrl(existingData.academicMouDocumentUrl || '');
+          setCertificationDocumentUrl(existingData.certificationDocumentUrl || '');
+        }
+      } catch (error) {
+        console.error('Error loading existing data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingData();
+  }, []);
+
+  // Validate file
+  const validateFile = (file: File, maxSize: number): boolean => {
+    if (file.type !== 'application/pdf') {
+      alert('Please select a PDF file only')
+      return false
+    }
+    if (file.size > maxSize * 1024 * 1024) {
+      alert(`File size must be less than ${maxSize}MB`)
+      return false
+    }
+    return true
+  }
 
   // Handle file upload for Academic MoU
-  const handleAcademicMouFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAcademicMouFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      // Validate file type
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file only')
-        return
-      }
-      // Validate file size (10MB = 10 * 1024 * 1024 bytes)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB')
-        return
-      }
+    if (file && validateFile(file, 10)) {
+      // Update the document first
       setAcademicMouDocument(file)
+
+      // Upload the file
+      try {
+        setUploadProgress(`Uploading Academic MoU document: ${file.name}...`)
+        const url = await uploadFileToS3(file)
+        if (url) {
+          setAcademicMouDocumentUrl(url)
+          setUploadProgress(`Academic MoU document uploaded successfully!`)
+          setTimeout(() => setUploadProgress(''), 3000)
+        }
+      } catch (error) {
+        console.error('Academic MoU document upload error:', error);
+        alert((error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`))
+        setUploadProgress('')
+      }
     }
   }
 
   // Handle file upload for Certification Document
-  const handleCertificationFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertificationFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      // Validate file type
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file only')
-        return
-      }
-      // Validate file size (5MB = 5 * 1024 * 1024 bytes)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB')
-        return
-      }
+    if (file && validateFile(file, 5)) {
+      // Update the document first
       setCertificationDocument(file)
+
+      // Upload the file
+      try {
+        setUploadProgress(`Uploading certification document: ${file.name}...`)
+        const url = await uploadFileToS3(file)
+        if (url) {
+          setCertificationDocumentUrl(url)
+          setUploadProgress(`Certification document uploaded successfully!`)
+          setTimeout(() => setUploadProgress(''), 3000)
+        }
+      } catch (error) {
+        console.error('Certification document upload error:', error);
+        alert((error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`))
+        setUploadProgress('')
+      }
     }
   }
+
+  // Remove Academic MoU document
+  const removeAcademicMouDocument = () => {
+    setAcademicMouDocument(null)
+    setAcademicMouDocumentUrl('')
+  }
+
+  // Remove Certification document
+  const removeCertificationDocument = () => {
+    setCertificationDocument(null)
+    setCertificationDocumentUrl('')
+  }
+
+  // View file function
+  const viewFile = (url: string) => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  // File control component for consistent UI
+  const FileControl = ({ 
+    documentUrl, 
+    document, 
+    onRemove, 
+    documentName = "Document" 
+  }: { 
+    documentUrl?: string, 
+    document: File | null, 
+    onRemove: () => void,
+    documentName?: string
+  }) => (
+    (document || documentUrl) ? (
+      <div className="flex items-center gap-1 mt-1">
+        <p className="text-xs text-green-600 flex-1">
+          {document ? `Selected: ${document.name}` : `${documentName} uploaded`}
+        </p>
+        {documentUrl && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => viewFile(documentUrl)}
+            className="text-xs px-1 py-0 h-5"
+          >
+            View
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onRemove}
+          className="text-xs px-1 py-0 h-5 text-red-600 hover:text-red-700"
+        >
+          Remove
+        </Button>
+      </div>
+    ) : null
+  )
 
   // Date handlers
   const handleIqacDateChange = (selectedDate: Date | undefined) => {
     setIqacDate(selectedDate)
-    const dateString = selectedDate ? selectedDate.toISOString().split('T')[0] : ''
-    // Update form data with date string
   }
 
   const handleAisheDateChange = (selectedDate: Date | undefined) => {
     setAisheDate(selectedDate)
-    const dateString = selectedDate ? selectedDate.toISOString().split('T')[0] : ''
-    // Update form data with date string
   }
 
   // URL validation helper
@@ -194,9 +435,12 @@ export const Qualityinformation = () => {
       rtiDeclaration,
       rtiDeclarationUrl,
       academicMou,
-      academicMouDocument,
+      academicMouDocument: null, // Don't include File objects in API call
+      academicMouDocumentUrl: academicMouDocumentUrl || undefined,
       aisheUploadDate: aisheDate ? aisheDate.toISOString().split('T')[0] : '',
-      certificationDocument
+      certificationDocument: null, // Don't include File objects in API call
+      certificationDocumentUrl: certificationDocumentUrl || undefined,
+      id: "QIT4"
     }
   }
 
@@ -206,6 +450,7 @@ export const Qualityinformation = () => {
     
     try {
       setIsSubmitting(true)
+      setUploadProgress('Submitting form data...')
       
       // Validate RTI URL if Yes is selected
       if (rtiDeclaration === 'Yes' && rtiDeclarationUrl && !isValidUrl(rtiDeclarationUrl)) {
@@ -215,49 +460,72 @@ export const Qualityinformation = () => {
       
       const formData = prepareFormData()
       
-      // Prepare complete data object
-      const completeData = {
-        qualityInformation: formData,
-    
+      // Get JWT token from localStorage
+      const token = localStorage.getItem('token')
+      
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.')
+      }
+
+      // Submit to your API
+      const response = await axios.post(
+        'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers',
+        {
+          questionId: "iiqa4",
+          answer: formData
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000
+        }
+      )
+      
+      if (response.data.message === "Answer saved") {
+        setUploadProgress('Form submitted successfully!')
+        alert('Quality information saved successfully!')
+      } else {
+        throw new Error('Unexpected response from server')
       }
       
-      // Log all data to console
-
-      console.log('Complete Form Data:', completeData)
-   
-      
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/quality-information', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(completeData)
-      // })
-      
-      // if (!response.ok) {
-      //   throw new Error('Failed to save quality information')
-      // }
-      
-      // const result = await response.json()
-      // console.log('Success:', result)
-      
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      console.log('✅ Quality information saved successfully!')
-      
     } catch (error) {
-      console.error('❌ Error saving quality information:', error)
-      // TODO: Add proper error handling/notification
+      console.error('Error saving quality information:', error)
+      let errorMessage = 'An unknown error occurred';
+      
+      if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        const err = error as any;
+        errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Error: ${errorMessage}`)
+      setUploadProgress('')
     } finally {
       setIsSubmitting(false)
+      setTimeout(() => setUploadProgress(''), 3000)
     }
   }
+
+
 
   return (
     <div className="w-full max-w-6xl mx-auto max-h-[80vh] flex flex-col">
       <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
+        {/* Upload Progress Indicator */}
+        {uploadProgress && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-blue-800">{uploadProgress}</p>
+          </div>
+        )}
+
         {/* Staff and Student Counts Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Staff and Student Information</h3>
@@ -308,11 +576,11 @@ export const Qualityinformation = () => {
                         onChange={(e) => setTeachingStaffTransgender(validateIntInput(e.target.value))}
                       />
                     </td>
-                                         <td className="border border-gray-300 px-3 py-2 bg-white">
-                       <div className="text-sm font-medium text-center">
-                         {calculateTotal(teachingStaffMale, teachingStaffFemale, teachingStaffTransgender)}
-                       </div>
-                     </td>
+                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                      <div className="text-sm font-medium text-center">
+                        {calculateTotal(teachingStaffMale, teachingStaffFemale, teachingStaffTransgender)}
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -365,11 +633,11 @@ export const Qualityinformation = () => {
                         onChange={(e) => setNonTeachingStaffTransgender(validateIntInput(e.target.value))}
                       />
                     </td>
-                                         <td className="border border-gray-300 px-3 py-2 bg-white">
-                       <div className="text-sm font-medium text-center">
-                         {calculateTotal(nonTeachingStaffMale, nonTeachingStaffFemale, nonTeachingStaffTransgender)}
-                       </div>
-                     </td>
+                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                      <div className="text-sm font-medium text-center">
+                        {calculateTotal(nonTeachingStaffMale, nonTeachingStaffFemale, nonTeachingStaffTransgender)}
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -422,11 +690,11 @@ export const Qualityinformation = () => {
                         onChange={(e) => setStudentsTransgender(validateIntInput(e.target.value))}
                       />
                     </td>
-                                         <td className="border border-gray-300 px-3 py-2 bg-white">
-                       <div className="text-sm font-medium text-center">
-                         {calculateTotal(studentsMale, studentsFemale, studentsTransgender)}
-                       </div>
-                     </td>
+                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                      <div className="text-sm font-medium text-center">
+                        {calculateTotal(studentsMale, studentsFemale, studentsTransgender)}
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -618,11 +886,12 @@ export const Qualityinformation = () => {
                   <p className="text-xs text-gray-500">
                     PDF only (10MB Max.)
                   </p>
-                  {academicMouDocument && (
-                    <p className="text-xs text-green-600">
-                      Selected: {academicMouDocument.name}
-                    </p>
-                  )}
+                  <FileControl
+                    documentUrl={academicMouDocumentUrl}
+                    document={academicMouDocument}
+                    onRemove={removeAcademicMouDocument}
+                    documentName="Academic MoU Document"
+                  />
                 </div>
               </div>
             )}
@@ -672,11 +941,12 @@ export const Qualityinformation = () => {
               <p className="text-xs text-gray-500">
                 PDF only (5MB Max.)
               </p>
-              {certificationDocument && (
-                <p className="text-xs text-green-600">
-                  Selected: {certificationDocument.name}
-                </p>
-              )}
+              <FileControl
+                documentUrl={certificationDocumentUrl}
+                document={certificationDocument}
+                onRemove={removeCertificationDocument}
+                documentName="Certification Document"
+              />
             </div>
           </div>
         </div>

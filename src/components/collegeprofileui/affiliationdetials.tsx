@@ -586,13 +586,6 @@ export const Affiliationdetials = () => {
     ) : null
   )
 
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-4xl mx-auto max-h-[80vh] flex items-center justify-center">
-        <p className="text-lg">Loading form data...</p>
-      </div>
-    )
-  }
 
   return (
     <div className="w-full max-w-4xl mx-auto max-h-[80vh] flex flex-col">

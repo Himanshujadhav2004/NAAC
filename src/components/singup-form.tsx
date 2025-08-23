@@ -63,8 +63,9 @@ console.log("Signup response", response.data.qrCodeUrl);
     newTab.document.write(`
       <html>
         <head><title>QR Code</title></head>
-        <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;">
+        <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh; flex-direction:column;">
           <img src="${response.data.qrCodeUrl}" alt="QR Code" style="max-width:100%;height:auto;" />
+          <h3>Scan this QR code with your authenticator app</h3>
         </body>
       </html>
     `);
