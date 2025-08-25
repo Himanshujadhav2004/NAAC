@@ -284,13 +284,13 @@ export function SignupForm({
                 )}
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">
-                    1. Open your authenticator app Google Authenticator, Authy, etc.
+                    Open your authenticator app Google Authenticator, Authy, etc.
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
-                    2. Scan the QR code above
+                   Scan the QR code above
                   </p>
                   <p className="text-sm text-gray-600">
-                    3. Click Continue once you've added the account
+                   Click Continue once you've added the account
                   </p>
                 </div>
               </div>
