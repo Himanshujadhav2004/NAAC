@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import CollegeProfile from "@/components/collegeprofile"
 import ProjectStructure from "@/components/projectstructure"
@@ -20,7 +21,8 @@ import {
 } from "@/components/ui/sidebar"
 import { useRouter, useSearchParams } from "next/navigation"
 
-export default function Page() {
+// Create a separate component for the content that uses useSearchParams
+function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const section = searchParams.get('section')
@@ -39,11 +41,11 @@ export default function Page() {
     switch (section) {
       case 'college-profile':
         return (
-        <CollegeProfile></CollegeProfile>
+          <CollegeProfile></CollegeProfile>
         )
       case 'project-structure':
         return (
-       <ProjectStructure></ProjectStructure>
+          <ProjectStructure></ProjectStructure>
         )
       default:
         return (
@@ -73,7 +75,7 @@ export default function Page() {
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
                 <BreadcrumbLink href="#">
-                 NAAC Portal
+                  NAAC Portal
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
@@ -99,5 +101,53 @@ export default function Page() {
         {renderContent()}
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+// Loading fallback component
+function DashboardLoading() {
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-[orientation=vertical]:h-4"
+          />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="#">
+                  NAAC Portal
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Loading...</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+            <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
+            <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
+            <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
+          </div>
+          <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min animate-pulse" />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
+
+// Main page component wrapped with Suspense
+export default function Page() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
