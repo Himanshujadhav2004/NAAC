@@ -25,7 +25,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
+// Sample data (no isActive flags here)
 const data = {
   navMain: [
     {
@@ -36,10 +36,10 @@ const data = {
           title: "College Profile",
           url: "/dashboard?section=college-profile",
         },
-        {
-          title: "Project Structure",
-          url: "/dashboard?section=project-structure",
-        },
+        // {
+        //   title: "Project Structure",
+        //   url: "/dashboard?section=project-structure",
+        // },
       ],
     },
     {
@@ -50,22 +50,20 @@ const data = {
           title: "SSR",
           url: "#",
         },
-        {
-          title: "SSR 2",
-          url: "#",
-          isActive: true,
-        }
+        // {
+        //   title: "SSR 2",
+        //   url: "#",
+        // }
       ],
     },
-    
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [userName, setUserName] = useState("user")
+  const [activeUrl, setActiveUrl] = useState<string | null>(null) // track active item
 
   useEffect(() => {
-    // Get username from localStorage
     const storedUserName = localStorage.getItem("userName")
     const collegeId = localStorage.getItem("collegeId");
     if (collegeId) {
@@ -81,11 +79,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                 <User></User>
+                  <User />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-medium">{userName}</span>
-                 
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -96,10 +93,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {data.navMain.map((item, index) => (
+            {data.navMain.map((item) => (
               <Collapsible
                 key={item.title}
-                defaultOpen={index === 1}
+                defaultOpen={false} // keep all closed initially
                 className="group/collapsible"
               >
                 <SidebarMenuItem>
@@ -113,13 +110,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {item.items?.length ? (
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items.map((item) => (
-                          <SidebarMenuSubItem key={item.title}>
+                        {item.items.map((subItem) => (
+                          <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={item.isActive}
+                              isActive={activeUrl === subItem.url} // active only when clicked
                             >
-                              <Link href={item.url}>{item.title}</Link>
+                              <Link
+                                href={subItem.url}
+                                onClick={() => setActiveUrl(subItem.url)}
+                              >
+                                {subItem.title}
+                              </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}

@@ -21,6 +21,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { set } from "date-fns";
 
 export function LoginForm({
   className,
@@ -36,6 +37,7 @@ export function LoginForm({
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
   const [tempToken, setTempToken] = useState("");
+const [successMsg, setSuccessMsg] = useState("");
 
   // Step 1: Login to request OTP
   const handleLogin = async (e: React.FormEvent) => {
@@ -94,6 +96,7 @@ export function LoginForm({
       localStorage.setItem("collegeId", collegeId);
 
       console.log("✅ Login successful, token stored.");
+      setSuccessMsg("Login successful!");
       router.push("/dashboard");
     } catch (error: any) {
       console.error("❌ OTP verification failed:", error);
@@ -121,7 +124,7 @@ export function LoginForm({
             <form onSubmit={handleLogin}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-3">
-                  <Label htmlFor="email">Username</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="text"
@@ -132,11 +135,11 @@ export function LoginForm({
                   />
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="collegeId">College Id</Label>
+                  <Label htmlFor="collegeId">AISHE ID</Label>
                   <Input
                     id="collegeId"
                     type="text"
-                    placeholder="collegeId123"
+                    placeholder="Enter AISHE ID"
                     value={collegeId}
                     onChange={(e) => setCollegeId(e.target.value)}
                     required
@@ -155,6 +158,7 @@ export function LoginForm({
                   <Input
                     id="password"
                     type="password"
+                    placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -194,6 +198,9 @@ export function LoginForm({
 
                 {errorMsg && (
                   <p className="text-sm text-red-500 text-center">{errorMsg}</p>
+                )}
+                {successMsg && (
+                  <p className="text-sm text-green-500 text-center">{successMsg}</p>
                 )}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP"}

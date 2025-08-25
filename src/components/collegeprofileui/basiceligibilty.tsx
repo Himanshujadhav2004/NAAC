@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { Checkbox } from '../ui/checkbox'
-
-import { ChevronDownIcon } from "lucide-react"
+import { ChevronDownIcon, Info, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
@@ -13,6 +11,13 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import axios from 'axios'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip"
+import { locationData } from '@/app/data/data'
 
 interface CollegeFormData {
   collegeAISHEID: string;
@@ -34,7 +39,6 @@ interface CollegeFormData {
   alternateEmail: string;
   website: string;
 
-
   // Alternate Faculty Contact
   alternateFacultyName: string;
   alternateAddress: string;
@@ -49,6 +53,62 @@ interface CollegeFormData {
   alternateFacultyAlternateEmail: string;
 }
 
+// Info Tooltip Component
+const InfoTooltip = ({ content }: { content: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button 
+        type="button" 
+        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+        aria-label="More information"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p className="max-w-xs">{content}</p>
+    </TooltipContent>
+  </Tooltip>
+)
+
+// Success Modal Component
+const SuccessModal = ({ 
+  isOpen, 
+  onClose, 
+  message 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  message: string;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Success!</h3>
+          <p className="text-sm text-gray-600 mb-4">{message}</p>
+          <Button 
+            onClick={onClose}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
+          >
+            Continue
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const Basiceligibilty = () => {
     const [open, setOpen] = React.useState(false)
@@ -64,1339 +124,45 @@ export const Basiceligibilty = () => {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [fetchedData, setFetchedData] = useState<any>(null);
     
-    // Nature of college selections
-    const [natureSelections, setNatureSelections] = useState({
-        Private: false,
-        Government: false,
-        'Self-fiancing': false,
-        'Grant-in-aid': false
-    })
+    // Modal states
+    const [showSuccessModal, setShowSuccessModal] = useState(false)
+    const [modalMessage, setModalMessage] = useState('')
     
     // Form state
     const [formData, setFormData] = useState<CollegeFormData>({
-  collegeAISHEID: '',
-  cycleOfAccreditation: '',
-  collegeName: '',
-  establishmentDate: '',
-  headOfInstitution: '',
-  designation: '',
-  ownCampus: '',
-  address: '',
-  state: '',
-  district: '',
-  city: '',
-  pin: '',
-  phoneNo: '',
-  faxNo: '',
-  mobileNo: '',
-  email: '',
-  alternateEmail: '',
-  website: '',
+        collegeAISHEID: '',
+        cycleOfAccreditation: '',
+        collegeName: '',
+        establishmentDate: '',
+        headOfInstitution: '',
+        designation: '',
+        ownCampus: '',
+        address: '',
+        state: '',
+        district: '',
+        city: '',
+        pin: '',
+        phoneNo: '',
+        faxNo: '',
+        mobileNo: '',
+        email: '',
+        alternateEmail: '',
+        website: '',
+        alternateFacultyName: '',
+        alternateAddress: '',
+        alternateState: '',
+        alternateDistrict: '',
+        alternateCity: '',
+        alternatePin: '',
+        alternatePhoneNo: '',
+        alternateFaxNo: '',
+        alternateMobileNo: '',
+        alternateFacultyEmail: '',
+        alternateFacultyAlternateEmail: ''
+    });
 
-
-  alternateFacultyName: '',
-  alternateAddress: '',
-  alternateState: '',
-  alternateDistrict: '',
-  alternateCity: '',
-  alternatePin: '',
-  alternatePhoneNo: '',
-  alternateFaxNo: '',
-  alternateMobileNo: '',
-  alternateFacultyEmail: '',
-  alternateFacultyAlternateEmail: ''
-});
-
-
-    const indiaData = {
-
-       "Andaman and Nicobar Islands": [
-            "Port Blair"
-        ],
-        "Haryana": [
-            "Faridabad",
-            "Gurgaon",
-            "Hisar",
-            "Rohtak",
-            "Panipat",
-            "Karnal",
-            "Sonipat",
-            "Yamunanagar",
-            "Panchkula",
-            "Bhiwani",
-            "Bahadurgarh",
-            "Jind",
-            "Sirsa",
-            "Thanesar",
-            "Kaithal",
-            "Palwal",
-            "Rewari",
-            "Hansi",
-            "Narnaul",
-            "Fatehabad",
-            "Gohana",
-            "Tohana",
-            "Narwana",
-            "Mandi Dabwali",
-            "Charkhi Dadri",
-            "Shahbad",
-            "Pehowa",
-            "Samalkha",
-            "Pinjore",
-            "Ladwa",
-            "Sohna",
-            "Safidon",
-            "Taraori",
-            "Mahendragarh",
-            "Ratia",
-            "Rania",
-            "Sarsod"
-        ],
-        "Tamil Nadu": [ 
-            "Chennai",
-            "Coimbatore",
-            "Madurai",
-            "Tiruchirappalli",
-            "Salem",
-            "Tirunelveli",
-            "Tiruppur",
-            "Ranipet",
-            "Nagercoil",
-            "Thanjavur",
-            "Vellore",
-            "Kancheepuram",
-            "Erode",
-            "Tiruvannamalai",
-            "Pollachi",
-            "Rajapalayam",
-            "Sivakasi",
-            "Pudukkottai",
-            "Neyveli (TS)",
-            "Nagapattinam",
-            "Viluppuram",
-            "Tiruchengode",
-            "Vaniyambadi",
-            "Theni Allinagaram",
-            "Udhagamandalam",
-            "Aruppukkottai",
-            "Paramakudi",
-            "Arakkonam",
-            "Virudhachalam",
-            "Srivilliputhur",
-            "Tindivanam",
-            "Virudhunagar",
-            "Karur",
-            "Valparai",
-            "Sankarankovil",
-            "Tenkasi",
-            "Palani",
-            "Pattukkottai",
-            "Tirupathur",
-            "Ramanathapuram",
-            "Udumalaipettai",
-            "Gobichettipalayam",
-            "Thiruvarur",
-            "Thiruvallur",
-            "Panruti",
-            "Namakkal",
-            "Thirumangalam",
-            "Vikramasingapuram",
-            "Nellikuppam",
-            "Rasipuram",
-            "Tiruttani",
-            "Nandivaram-Guduvancheri",
-            "Periyakulam",
-            "Pernampattu",
-            "Vellakoil",
-            "Sivaganga",
-            "Vadalur",
-            "Rameshwaram",
-            "Tiruvethipuram",
-            "Perambalur",
-            "Usilampatti",
-            "Vedaranyam",
-            "Sathyamangalam",
-            "Puliyankudi",
-            "Nanjikottai",
-            "Thuraiyur",
-            "Sirkali",
-            "Tiruchendur",
-            "Periyasemur",
-            "Sattur",
-            "Vandavasi",
-            "Tharamangalam",
-            "Tirukkoyilur",
-            "Oddanchatram",
-            "Palladam",
-            "Vadakkuvalliyur",
-            "Tirukalukundram",
-            "Uthamapalayam",
-            "Surandai",
-            "Sankari",
-            "Shenkottai",
-            "Vadipatti",
-            "Sholingur",
-            "Tirupathur",
-            "Manachanallur",
-            "Viswanatham",
-            "Polur",
-            "Panagudi",
-            "Uthiramerur",
-            "Thiruthuraipoondi",
-            "Pallapatti",
-            "Ponneri",
-            "Lalgudi",
-            "Natham",
-            "Unnamalaikadai",
-            "P.N.Patti",
-            "Tharangambadi",
-            "Tittakudi",
-            "Pacode",
-            "O' Valley",
-            "Suriyampalayam",
-            "Sholavandan",
-            "Thammampatti",
-            "Namagiripettai",
-            "Peravurani",
-            "Parangipettai",
-            "Pudupattinam",
-            "Pallikonda",
-            "Sivagiri",
-            "Punjaipugalur",
-            "Padmanabhapuram",
-            "Thirupuvanam"
-        ],
-        "Madhya Pradesh": [
-            "Indore",
-            "Bhopal",
-            "Jabalpur",
-            "Gwalior",
-            "Ujjain",
-            "Sagar",
-            "Ratlam",
-            "Satna",
-            "Murwara (Katni)",
-            "Morena",
-            "Singrauli",
-            "Rewa",
-            "Vidisha",
-            "Ganjbasoda",
-            "Shivpuri",
-            "Mandsaur",
-            "Neemuch",
-            "Nagda",
-            "Itarsi",
-            "Sarni",
-            "Sehore",
-            "Mhow Cantonment",
-            "Seoni",
-            "Balaghat",
-            "Ashok Nagar",
-            "Tikamgarh",
-            "Shahdol",
-            "Pithampur",
-            "Alirajpur",
-            "Mandla",
-            "Sheopur",
-            "Shajapur",
-            "Panna",
-            "Raghogarh-Vijaypur",
-            "Sendhwa",
-            "Sidhi",
-            "Pipariya",
-            "Shujalpur",
-            "Sironj",
-            "Pandhurna",
-            "Nowgong",
-            "Mandideep",
-            "Sihora",
-            "Raisen",
-            "Lahar",
-            "Maihar",
-            "Sanawad",
-            "Sabalgarh",
-            "Umaria",
-            "Porsa",
-            "Narsinghgarh",
-            "Malaj Khand",
-            "Sarangpur",
-            "Mundi",
-            "Nepanagar",
-            "Pasan",
-            "Mahidpur",
-            "Seoni-Malwa",
-            "Rehli",
-            "Manawar",
-            "Rahatgarh",
-            "Panagar",
-            "Wara Seoni",
-            "Tarana",
-            "Sausar",
-            "Rajgarh",
-            "Niwari",
-            "Mauganj",
-            "Manasa",
-            "Nainpur",
-            "Prithvipur",
-            "Sohagpur",
-            "Nowrozabad (Khodargama)",
-            "Shamgarh",
-            "Maharajpur",
-            "Multai",
-            "Pali",
-            "Pachore",
-            "Rau",
-            "Mhowgaon",
-            "Vijaypur",
-            "Narsinghgarh"
-        ],
-        "Jharkhand": [
-            "Dhanbad",
-            "Ranchi",
-            "Jamshedpur",
-            "Bokaro Steel City",
-            "Deoghar",
-            "Phusro",
-            "Adityapur",
-            "Hazaribag",
-            "Giridih",
-            "Ramgarh",
-            "Jhumri Tilaiya",
-            "Saunda",
-            "Sahibganj",
-            "Medininagar (Daltonganj)",
-            "Chaibasa",
-            "Chatra",
-            "Gumia",
-            "Dumka",
-            "Madhupur",
-            "Chirkunda",
-            "Pakaur",
-            "Simdega",
-            "Musabani",
-            "Mihijam",
-            "Patratu",
-            "Lohardaga",
-            "Tenu dam-cum-Kathhara"
-        ],
-        "Mizoram": [
-            "Aizawl",
-            "Lunglei",
-            "Saiha"
-        ],
-        "Nagaland": [
-            "Dimapur",
-            "Kohima",
-            "Zunheboto",
-            "Tuensang",
-            "Wokha",
-            "Mokokchung"
-        ],
-        "Himachal Pradesh": [
-            "Shimla",
-            "Mandi",
-            "Solan",
-            "Nahan",
-            "Sundarnagar",
-            "Palampur",
-            "Kullu"
-        ],
-        "Tripura": [
-            "Agartala",
-            "Udaipur",
-            "Dharmanagar",
-            "Pratapgarh",
-            "Kailasahar",
-            "Belonia",
-            "Khowai"
-        ],
-        "Andhra Pradesh": [
-            "Visakhapatnam",
-            "Vijayawada",
-            "Guntur",
-            "Nellore",
-            "Kurnool",
-            "Rajahmundry",
-            "Kakinada",
-            "Tirupati",
-            "Anantapur",
-            "Kadapa",
-            "Vizianagaram",
-            "Eluru",
-            "Ongole",
-            "Nandyal",
-            "Machilipatnam",
-            "Adoni",
-            "Tenali",
-            "Chittoor",
-            "Hindupur",
-            "Proddatur",
-            "Bhimavaram",
-            "Madanapalle",
-            "Guntakal",
-            "Dharmavaram",
-            "Gudivada",
-            "Srikakulam",
-            "Narasaraopet",
-            "Rajampet",
-            "Tadpatri",
-            "Tadepalligudem",
-            "Chilakaluripet",
-            "Yemmiganur",
-            "Kadiri",
-            "Chirala",
-            "Anakapalle",
-            "Kavali",
-            "Palacole",
-            "Sullurpeta",
-            "Tanuku",
-            "Rayachoti",
-            "Srikalahasti",
-            "Bapatla",
-            "Naidupet",
-            "Nagari",
-            "Gudur",
-            "Vinukonda",
-            "Narasapuram",
-            "Nuzvid",
-            "Markapur",
-            "Ponnur",
-            "Kandukur",
-            "Bobbili",
-            "Rayadurg",
-            "Samalkot",
-            "Jaggaiahpet",
-            "Tuni",
-            "Amalapuram",
-            "Bheemunipatnam",
-            "Venkatagiri",
-            "Sattenapalle",
-            "Pithapuram",
-            "Palasa Kasibugga",
-            "Parvathipuram",
-            "Macherla",
-            "Gooty",
-            "Salur",
-            "Mandapeta",
-            "Jammalamadugu",
-            "Peddapuram",
-            "Punganur",
-            "Nidadavole",
-            "Repalle",
-            "Ramachandrapuram",
-            "Kovvur",
-            "Tiruvuru",
-            "Uravakonda",
-            "Narsipatnam",
-            "Yerraguntla",
-            "Pedana",
-            "Puttur",
-            "Renigunta",
-            "Rajam",
-            "Srisailam Project (Right Flank Colony) Township"
-        ],
-        "Punjab": [
-            "Ludhiana",
-            "Patiala",
-            "Amritsar",
-            "Jalandhar",
-            "Bathinda",
-            "Pathankot",
-            "Hoshiarpur",
-            "Batala",
-            "Moga",
-            "Malerkotla",
-            "Khanna",
-            "Mohali",
-            "Barnala",
-            "Firozpur",
-            "Phagwara",
-            "Kapurthala",
-            "Zirakpur",
-            "Kot Kapura",
-            "Faridkot",
-            "Muktsar",
-            "Rajpura",
-            "Sangrur",
-            "Fazilka",
-            "Gurdaspur",
-            "Kharar",
-            "Gobindgarh",
-            "Mansa",
-            "Malout",
-            "Nabha",
-            "Tarn Taran",
-            "Jagraon",
-            "Sunam",
-            "Dhuri",
-            "Firozpur Cantt.",
-            "Sirhind Fatehgarh Sahib",
-            "Rupnagar",
-            "Jalandhar Cantt.",
-            "Samana",
-            "Nawanshahr",
-            "Rampura Phul",
-            "Nangal",
-            "Nakodar",
-            "Zira",
-            "Patti",
-            "Raikot",
-            "Longowal",
-            "Urmar Tanda",
-            "Morinda, India",
-            "Phillaur",
-            "Pattran",
-            "Qadian",
-            "Sujanpur",
-            "Mukerian",
-            "Talwara"
-        ],
-        "Chandigarh": [
-            "Chandigarh"
-        ],
-        "Rajasthan": [
-            "Jaipur",
-            "Jodhpur",
-            "Bikaner",
-            "Udaipur",
-            "Ajmer",
-            "Bhilwara",
-            "Alwar",
-            "Bharatpur",
-            "Pali",
-            "Barmer",
-            "Sikar",
-            "Tonk",
-            "Sadulpur",
-            "Sawai Madhopur",
-            "Nagaur",
-            "Makrana",
-            "Sujangarh",
-            "Sardarshahar",
-            "Ladnu",
-            "Ratangarh",
-            "Nokha",
-            "Nimbahera",
-            "Suratgarh",
-            "Rajsamand",
-            "Lachhmangarh",
-            "Rajgarh (Churu)",
-            "Nasirabad",
-            "Nohar",
-            "Phalodi",
-            "Nathdwara",
-            "Pilani",
-            "Merta City",
-            "Sojat",
-            "Neem-Ka-Thana",
-            "Sirohi",
-            "Pratapgarh",
-            "Rawatbhata",
-            "Sangaria",
-            "Lalsot",
-            "Pilibanga",
-            "Pipar City",
-            "Taranagar",
-            "Vijainagar, Ajmer",
-            "Sumerpur",
-            "Sagwara",
-            "Ramganj Mandi",
-            "Lakheri",
-            "Udaipurwati",
-            "Losal",
-            "Sri Madhopur",
-            "Ramngarh",
-            "Rawatsar",
-            "Rajakhera",
-            "Shahpura",
-            "Raisinghnagar",
-            "Malpura",
-            "Nadbai",
-            "Sanchore",
-            "Nagar",
-            "Rajgarh (Alwar)",
-            "Sheoganj",
-            "Sadri",
-            "Todaraisingh",
-            "Todabhim",
-            "Reengus",
-            "Rajaldesar",
-            "Sadulshahar",
-            "Sambhar",
-            "Prantij",
-            "Mount Abu",
-            "Mangrol",
-            "Phulera",
-            "Mandawa",
-            "Pindwara",
-            "Mandalgarh",
-            "Takhatgarh"
-        ],
-        "Assam": [
-            "Guwahati",
-            "Silchar",
-            "Dibrugarh",
-            "Nagaon",
-            "Tinsukia",
-            "Jorhat",
-            "Bongaigaon City",
-            "Dhubri",
-            "Diphu",
-            "North Lakhimpur",
-            "Tezpur",
-            "Karimganj",
-            "Sibsagar",
-            "Goalpara",
-            "Barpeta",
-            "Lanka",
-            "Lumding",
-            "Mankachar",
-            "Nalbari",
-            "Rangia",
-            "Margherita",
-            "Mangaldoi",
-            "Silapathar",
-            "Mariani",
-            "Marigaon"
-        ],
-        "Odisha": [
-            "Bhubaneswar",
-            "Cuttack",
-            "Raurkela",
-            "Brahmapur",
-            "Sambalpur",
-            "Puri",
-            "Baleshwar Town",
-            "Baripada Town",
-            "Bhadrak",
-            "Balangir",
-            "Jharsuguda",
-            "Bargarh",
-            "Paradip",
-            "Bhawanipatna",
-            "Dhenkanal",
-            "Barbil",
-            "Kendujhar",
-            "Sunabeda",
-            "Rayagada",
-            "Jatani",
-            "Byasanagar",
-            "Kendrapara",
-            "Rajagangapur",
-            "Parlakhemundi",
-            "Talcher",
-            "Sundargarh",
-            "Phulabani",
-            "Pattamundai",
-            "Titlagarh",
-            "Nabarangapur",
-            "Soro",
-            "Malkangiri",
-            "Rairangpur",
-            "Tarbha"
-        ],
-        "Chhattisgarh": [
-            "Raipur",
-            "Bhilai Nagar",
-            "Korba",
-            "Bilaspur",
-            "Durg",
-            "Rajnandgaon",
-            "Jagdalpur",
-            "Raigarh",
-            "Ambikapur",
-            "Mahasamund",
-            "Dhamtari",
-            "Chirmiri",
-            "Bhatapara",
-            "Dalli-Rajhara",
-            "Naila Janjgir",
-            "Tilda Newra",
-            "Mungeli",
-            "Manendragarh",
-            "Sakti"
-        ],
-        "Jammu and Kashmir": [
-            "Srinagar",
-            "Jammu",
-            "Baramula",
-            "Anantnag",
-            "Sopore",
-            "KathUrban Agglomeration",
-            "Rajauri",
-            "Punch",
-            "Udhampur"
-        ],
-        "Karnataka": [
-            "Bengaluru",
-            "Hubli-Dharwad",
-            "Belagavi",
-            "Mangaluru",
-            "Davanagere",
-            "Ballari",
-            "Mysore",
-            "Tumkur",
-            "Shivamogga",
-            "Raayachuru",
-            "Robertson Pet",
-            "Kolar",
-            "Mandya",
-            "Udupi",
-            "Chikkamagaluru",
-            "Karwar",
-            "Ranebennuru",
-            "Ranibennur",
-            "Ramanagaram",
-            "Gokak",
-            "Yadgir",
-            "Rabkavi Banhatti",
-            "Shahabad",
-            "Sirsi",
-            "Sindhnur",
-            "Tiptur",
-            "Arsikere",
-            "Nanjangud",
-            "Sagara",
-            "Sira",
-            "Puttur",
-            "Athni",
-            "Mulbagal",
-            "Surapura",
-            "Siruguppa",
-            "Mudhol",
-            "Sidlaghatta",
-            "Shahpur",
-            "Saundatti-Yellamma",
-            "Wadi",
-            "Manvi",
-            "Nelamangala",
-            "Lakshmeshwar",
-            "Ramdurg",
-            "Nargund",
-            "Tarikere",
-            "Malavalli",
-            "Savanur",
-            "Lingsugur",
-            "Vijayapura",
-            "Sankeshwara",
-            "Madikeri",
-            "Talikota",
-            "Sedam",
-            "Shikaripur",
-            "Mahalingapura",
-            "Mudalagi",
-            "Muddebihal",
-            "Pavagada",
-            "Malur",
-            "Sindhagi",
-            "Sanduru",
-            "Afzalpur",
-            "Maddur",
-            "Madhugiri",
-            "Tekkalakote",
-            "Terdal",
-            "Mudabidri",
-            "Magadi",
-            "Navalgund",
-            "Shiggaon",
-            "Shrirangapattana",
-            "Sindagi",
-            "Sakaleshapura",
-            "Srinivaspur",
-            "Ron",
-            "Mundargi",
-            "Sadalagi",
-            "Piriyapatna",
-            "Adyar"
-        ],
-        "Manipur": [
-            "Imphal",
-            "Thoubal",
-            "Lilong",
-            "Mayang Imphal"
-        ],
-        "Kerala": [
-            "Thiruvananthapuram",
-            "Kochi",
-            "Kozhikode",
-            "Kollam",
-            "Thrissur",
-            "Palakkad",
-            "Alappuzha",
-            "Malappuram",
-            "Ponnani",
-            "Vatakara",
-            "Kanhangad",
-            "Taliparamba",
-            "Koyilandy",
-            "Neyyattinkara",
-            "Kayamkulam",
-            "Nedumangad",
-            "Kannur",
-            "Tirur",
-            "Kottayam",
-            "Kasaragod",
-            "Kunnamkulam",
-            "Ottappalam",
-            "Thiruvalla",
-            "Thodupuzha",
-            "Chalakudy",
-            "Changanassery",
-            "Punalur",
-            "Nilambur",
-            "Cherthala",
-            "Perinthalmanna",
-            "Mattannur",
-            "Shoranur",
-            "Varkala",
-            "Paravoor",
-            "Pathanamthitta",
-            "Peringathur",
-            "Attingal",
-            "Kodungallur",
-            "Pappinisseri",
-            "Chittur-Thathamangalam",
-            "Muvattupuzha",
-            "Adoor",
-            "Mavelikkara",
-            "Mavoor",
-            "Perumbavoor",
-            "Vaikom",
-            "Palai",
-            "Panniyannur",
-            "Guruvayoor",
-            "Puthuppally",
-            "Panamattom"
-        ],
-        "Delhi": [
-            "Delhi",
-            "New Delhi"
-        ],
-        "Dadra and Nagar Haveli": [
-            "Silvassa"
-        ],
-        "Puducherry": [
-            "Pondicherry",
-            "Karaikal",
-            "Yanam",
-            "Mahe"
-        ],
-        "Uttarakhand": [
-            "Dehradun",
-            "Hardwar",
-            "Haldwani-cum-Kathgodam",
-            "Srinagar",
-            "Kashipur",
-            "Roorkee",
-            "Rudrapur",
-            "Rishikesh",
-            "Ramnagar",
-            "Pithoragarh",
-            "Manglaur",
-            "Nainital",
-            "Mussoorie",
-            "Tehri",
-            "Pauri",
-            "Nagla",
-            "Sitarganj",
-            "Bageshwar"
-        ],
-        "Uttar Pradesh": [
-            "Lucknow",
-            "Kanpur",
-            "Firozabad",
-            "Agra",
-            "Meerut",
-            "Varanasi",
-            "Allahabad",
-            "Amroha",
-            "Moradabad",
-            "Aligarh",
-            "Saharanpur",
-            "Noida",
-            "Loni",
-            "Jhansi",
-            "Shahjahanpur",
-            "Rampur",
-            "Modinagar",
-            "Hapur",
-            "Etawah",
-            "Sambhal",
-            "Orai",
-            "Bahraich",
-            "Unnao",
-            "Rae Bareli",
-            "Lakhimpur",
-            "Sitapur",
-            "Lalitpur",
-            "Pilibhit",
-            "Chandausi",
-            "Hardoi ",
-            "Azamgarh",
-            "Khair",
-            "Sultanpur",
-            "Tanda",
-            "Nagina",
-            "Shamli",
-            "Najibabad",
-            "Shikohabad",
-            "Sikandrabad",
-            "Shahabad, Hardoi",
-            "Pilkhuwa",
-            "Renukoot",
-            "Vrindavan",
-            "Ujhani",
-            "Laharpur",
-            "Tilhar",
-            "Sahaswan",
-            "Rath",
-            "Sherkot",
-            "Kalpi",
-            "Tundla",
-            "Sandila",
-            "Nanpara",
-            "Sardhana",
-            "Nehtaur",
-            "Seohara",
-            "Padrauna",
-            "Mathura",
-            "Thakurdwara",
-            "Nawabganj",
-            "Siana",
-            "Noorpur",
-            "Sikandra Rao",
-            "Puranpur",
-            "Rudauli",
-            "Thana Bhawan",
-            "Palia Kalan",
-            "Zaidpur",
-            "Nautanwa",
-            "Zamania",
-            "Shikarpur, Bulandshahr",
-            "Naugawan Sadat",
-            "Fatehpur Sikri",
-            "Shahabad, Rampur",
-            "Robertsganj",
-            "Utraula",
-            "Sadabad",
-            "Rasra",
-            "Lar",
-            "Lal Gopalganj Nindaura",
-            "Sirsaganj",
-            "Pihani",
-            "Shamsabad, Agra",
-            "Rudrapur",
-            "Soron",
-            "SUrban Agglomerationr",
-            "Samdhan",
-            "Sahjanwa",
-            "Rampur Maniharan",
-            "Sumerpur",
-            "Shahganj",
-            "Tulsipur",
-            "Tirwaganj",
-            "PurqUrban Agglomerationzi",
-            "Shamsabad, Farrukhabad",
-            "Warhapur",
-            "Powayan",
-            "Sandi",
-            "Achhnera",
-            "Naraura",
-            "Nakur",
-            "Sahaspur",
-            "Safipur",
-            "Reoti",
-            "Sikanderpur",
-            "Saidpur",
-            "Sirsi",
-            "Purwa",
-            "Parasi",
-            "Lalganj",
-            "Phulpur",
-            "Shishgarh",
-            "Sahawar",
-            "Samthar",
-            "Pukhrayan",
-            "Obra",
-            "Niwai",
-            "Mirzapur"
-        ],
-        "Bihar": [
-            "Patna",
-            "Gaya",
-            "Bhagalpur",
-            "Muzaffarpur",
-            "Darbhanga",
-            "Arrah",
-            "Begusarai",
-            "Chhapra",
-            "Katihar",
-            "Munger",
-            "Purnia",
-            "Saharsa",
-            "Sasaram",
-            "Hajipur",
-            "Dehri-on-Sone",
-            "Bettiah",
-            "Motihari",
-            "Bagaha",
-            "Siwan",
-            "Kishanganj",
-            "Jamalpur",
-            "Buxar",
-            "Jehanabad",
-            "Aurangabad",
-            "Lakhisarai",
-            "Nawada",
-            "Jamui",
-            "Sitamarhi",
-            "Araria",
-            "Gopalganj",
-            "Madhubani",
-            "Masaurhi",
-            "Samastipur",
-            "Mokameh",
-            "Supaul",
-            "Dumraon",
-            "Arwal",
-            "Forbesganj",
-            "BhabUrban Agglomeration",
-            "Narkatiaganj",
-            "Naugachhia",
-            "Madhepura",
-            "Sheikhpura",
-            "Sultanganj",
-            "Raxaul Bazar",
-            "Ramnagar",
-            "Mahnar Bazar",
-            "Warisaliganj",
-            "Revelganj",
-            "Rajgir",
-            "Sonepur",
-            "Sherghati",
-            "Sugauli",
-            "Makhdumpur",
-            "Maner",
-            "Rosera",
-            "Nokha",
-            "Piro",
-            "Rafiganj",
-            "Marhaura",
-            "Mirganj",
-            "Lalganj",
-            "Murliganj",
-            "Motipur",
-            "Manihari",
-            "Sheohar",
-            "Maharajganj",
-            "Silao",
-            "Barh",
-            "Asarganj"
-        ],
-        "Gujarat": [
-            "Ahmedabad",
-            "Surat",
-            "Vadodara",
-            "Rajkot",
-            "Bhavnagar",
-            "Jamnagar",
-            "Nadiad",
-            "Porbandar",
-            "Anand",
-            "Morvi",
-            "Mahesana",
-            "Bharuch",
-            "Vapi",
-            "Navsari",
-            "Veraval",
-            "Bhuj",
-            "Godhra",
-            "Palanpur",
-            "Valsad",
-            "Patan",
-            "Deesa",
-            "Amreli",
-            "Anjar",
-            "Dhoraji",
-            "Khambhat",
-            "Mahuva",
-            "Keshod",
-            "Wadhwan",
-            "Ankleshwar",
-            "Savarkundla",
-            "Kadi",
-            "Visnagar",
-            "Upleta",
-            "Una",
-            "Sidhpur",
-            "Unjha",
-            "Mangrol",
-            "Viramgam",
-            "Modasa",
-            "Palitana",
-            "Petlad",
-            "Kapadvanj",
-            "Sihor",
-            "Wankaner",
-            "Limbdi",
-            "Mandvi",
-            "Thangadh",
-            "Vyara",
-            "Padra",
-            "Lunawada",
-            "Rajpipla",
-            "Umreth",
-            "Sanand",
-            "Rajula",
-            "Radhanpur",
-            "Mahemdabad",
-            "Ranavav",
-            "Tharad",
-            "Mansa",
-            "Umbergaon",
-            "Talaja",
-            "Vadnagar",
-            "Manavadar",
-            "Salaya",
-            "Vijapur",
-            "Pardi",
-            "Rapar",
-            "Songadh",
-            "Lathi",
-            "Adalaj",
-            "Chhapra",
-            "Gandhinagar"
-        ],
-        "Telangana": [
-            "Hyderabad",
-            "Warangal",
-            "Nizamabad",
-            "Karimnagar",
-            "Ramagundam",
-            "Khammam",
-            "Mahbubnagar",
-            "Mancherial",
-            "Adilabad",
-            "Suryapet",
-            "Jagtial",
-            "Miryalaguda",
-            "Nirmal",
-            "Kamareddy",
-            "Kothagudem",
-            "Bodhan",
-            "Palwancha",
-            "Mandamarri",
-            "Koratla",
-            "Sircilla",
-            "Tandur",
-            "Siddipet",
-            "Wanaparthy",
-            "Kagaznagar",
-            "Gadwal",
-            "Sangareddy",
-            "Bellampalle",
-            "Bhongir",
-            "Vikarabad",
-            "Jangaon",
-            "Bhadrachalam",
-            "Bhainsa",
-            "Farooqnagar",
-            "Medak",
-            "Narayanpet",
-            "Sadasivpet",
-            "Yellandu",
-            "Manuguru",
-            "Kyathampalle",
-            "Nagarkurnool"
-        ],
-        "Meghalaya": [
-            "Shillong",
-            "Tura",
-            "Nongstoin"
-        ],
-        "Himachal Praddesh": [
-            "Manali"
-        ],
-        "Arunachal Pradesh": [
-            "Naharlagun",
-            "Pasighat"
-        ],
-        "Maharashtra": [
-            "Mumbai",
-            "Pune",
-            "Nagpur",
-            "Thane",
-            "Nashik",
-            "Kalyan-Dombivali",
-            "Vasai-Virar",
-            "Solapur",
-            "Mira-Bhayandar",
-            "Bhiwandi",
-            "Amravati",
-            "Nanded-Waghala",
-            "Sangli",
-            "Malegaon",
-            "Akola",
-            "Latur",
-            "Dhule",
-            "Ahmednagar",
-            "Ichalkaranji",
-            "Parbhani",
-            "Panvel",
-            "Yavatmal",
-            "Achalpur",
-            "Osmanabad",
-            "Nandurbar",
-            "Satara",
-            "Wardha",
-            "Udgir",
-            "Aurangabad",
-            "Amalner",
-            "Akot",
-            "Pandharpur",
-            "Shrirampur",
-            "Parli",
-            "Washim",
-            "Ambejogai",
-            "Manmad",
-            "Ratnagiri",
-            "Uran Islampur",
-            "Pusad",
-            "Sangamner",
-            "Shirpur-Warwade",
-            "Malkapur",
-            "Wani",
-            "Lonavla",
-            "Talegaon Dabhade",
-            "Anjangaon",
-            "Umred",
-            "Palghar",
-            "Shegaon",
-            "Ozar",
-            "Phaltan",
-            "Yevla",
-            "Shahade",
-            "Vita",
-            "Umarkhed",
-            "Warora",
-            "Pachora",
-            "Tumsar",
-            "Manjlegaon",
-            "Sillod",
-            "Arvi",
-            "Nandura",
-            "Vaijapur",
-            "Wadgaon Road",
-            "Sailu",
-            "Murtijapur",
-            "Tasgaon",
-            "Mehkar",
-            "Yawal",
-            "Pulgaon",
-            "Nilanga",
-            "Wai",
-            "Umarga",
-            "Paithan",
-            "Rahuri",
-            "Nawapur",
-            "Tuljapur",
-            "Morshi",
-            "Purna",
-            "Satana",
-            "Pathri",
-            "Sinnar",
-            "Uchgaon",
-            "Uran",
-            "Pen",
-            "Karjat",
-            "Manwath",
-            "Partur",
-            "Sangole",
-            "Mangrulpir",
-            "Risod",
-            "Shirur",
-            "Savner",
-            "Sasvad",
-            "Pandharkaoda",
-            "Talode",
-            "Shrigonda",
-            "Shirdi",
-            "Raver",
-            "Mukhed",
-            "Rajura",
-            "Vadgaon Kasba",
-            "Tirora",
-            "Mahad",
-            "Lonar",
-            "Sawantwadi",
-            "Pathardi",
-            "Pauni",
-            "Ramtek",
-            "Mul",
-            "Soyagaon",
-            "Mangalvedhe",
-            "Narkhed",
-            "Shendurjana",
-            "Patur",
-            "Mhaswad",
-            "Loha",
-            "Nandgaon",
-            "Warud"
-        ],
-        "Goa": [
-            "Marmagao",
-            "Panaji",
-            "Margao",
-            "Mapusa"
-        ],
-        "West Bengal": [
-            "Kolkata",
-            "Siliguri",
-            "Asansol",
-            "Raghunathganj",
-            "Kharagpur",
-            "Naihati",
-            "English Bazar",
-            "Baharampur",
-            "Hugli-Chinsurah",
-            "Raiganj",
-            "Jalpaiguri",
-            "Santipur",
-            "Balurghat",
-            "Medinipur",
-            "Habra",
-            "Ranaghat",
-            "Bankura",
-            "Nabadwip",
-            "Darjiling",
-            "Purulia",
-            "Arambagh",
-            "Tamluk",
-            "AlipurdUrban Agglomerationr",
-            "Suri",
-            "Jhargram",
-            "Gangarampur",
-            "Rampurhat",
-            "Kalimpong",
-            "Sainthia",
-            "Taki",
-            "Murshidabad",
-            "Memari",
-            "Paschim Punropara",
-            "Tarakeswar",
-            "Sonamukhi",
-            "PandUrban Agglomeration",
-            "Mainaguri",
-            "Malda",
-            "Panchla",
-            "Raghunathpur",
-            "Mathabhanga",
-            "Monoharpur",
-            "Srirampore",
-            "Adra"
-        ]
-    }
-
+    const indiaData = locationData;
+    
     const handleStateChange = (value: string) => {
         setSelectedState(value)
         setSelectedDistrict('') // Reset district when state changes
@@ -1436,8 +202,21 @@ export const Basiceligibilty = () => {
 
     const handleDateChange = (selectedDate: Date | undefined) => {
         setDate(selectedDate)
-        const dateString = selectedDate ? selectedDate.toISOString().split('T')[0] : ''
-        setFormData(prev => ({ ...prev, establishmentDate: dateString || '' }))
+
+        let dateString = ''
+        if (selectedDate) {
+            const day = String(selectedDate.getDate()).padStart(2, '0')
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+            const year = selectedDate.getFullYear()
+            // choose format depending on backend needs
+            dateString = `${year}-${month}-${day}`   // yyyy-mm-dd  ✅ safe for DB
+            // OR dateString = `${day}-${month}-${year}` // dd-mm-yyyy (if you prefer UI format)
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            establishmentDate: dateString
+        }))
     }
 
     const getAgeInYearsAndMonths = (selectedDate?: Date) => {
@@ -1469,726 +248,827 @@ export const Basiceligibilty = () => {
                 district: selectedDistrict,
                 alternateState: selectedAlternateState,
                 alternateDistrict: selectedAlternateDistrict,
- ageOfInstitution: getAgeInYearsAndMonths(date)
+                ageOfInstitution: getAgeInYearsAndMonths(date)
             }
-            
-            // Prepare complete data object
-            
             
             // Log all data to console
             console.log('=== BASIC ELIGIBILITY FORM DATA ===')
             console.log('Complete Form Data:', completeData)
-            // console.log('---')
-            // console.log('College Information:', {
-            //     collegeAISHEID: finalFormData.collegeAISHEID,
-            //     cycleOfAccreditation: finalFormData.cycleOfAccreditation,
-            //     collegeName: finalFormData.collegeName,
-            //     establishmentDate: finalFormData.establishmentDate,
-            //     ageOfInstitution: getAgeInYearsAndMonths(date)
-            // })
-            // console.log('---')
-            // console.log('Head of Institution:', {
-            //     headOfInstitution: finalFormData.headOfInstitution,
-            //     designation: finalFormData.designation
-            // })
-            // console.log('---')
-            // console.log('Campus Information:', {
-            //     ownCampus: finalFormData.ownCampus,
-            //     address: finalFormData.address,
-            //     state: finalFormData.state,
-            //     district: finalFormData.district,
-            //     city: finalFormData.city,
-            //     pin: finalFormData.pin
-            // })
-            // console.log('---')
-            // console.log('Contact Information:', {
-            //     phoneNo: finalFormData.phoneNo,
-            //     faxNo: finalFormData.faxNo,
-            //     mobileNo: finalFormData.mobileNo,
-            //     email: finalFormData.email,
-            //     alternateEmail: finalFormData.alternateEmail,
-            //     website: finalFormData.website
-            // })
-            // console.log('---')
-            // console.log('Alternate Faculty Contact:', {
-            //     alternateFacultyName: finalFormData.alternateFacultyName,
-            //     alternateAddress: finalFormData.alternateAddress,
-            //     alternateState: finalFormData.alternateState,
-            //     alternateDistrict: finalFormData.alternateDistrict,
-            //     alternateCity: finalFormData.alternateCity,
-            //     alternatePin: finalFormData.alternatePin,
-            //     alternatePhoneNo: finalFormData.alternatePhoneNo,
-            //     alternateFaxNo: finalFormData.alternateFaxNo,
-            //     alternateMobileNo: finalFormData.alternateMobileNo,
-            //     alternateFacultyEmail: finalFormData.alternateFacultyEmail,
-            //     alternateFacultyAlternateEmail: finalFormData.alternateFacultyAlternateEmail
-            // })
-            // console.log('---')
-            // console.log('Summary:')
-            // console.log(`- Age of Institution: ${getAgeInYearsAndMonths(date)}`)
-            // console.log(`- Has Alternate Faculty: ${!!finalFormData.alternateFacultyName}`)
-            // console.log(`- Total Fields: ${Object.keys(finalFormData).length}`)
-            // console.log('=== END OF DATA ===')
-  const token = localStorage.getItem("token"); // or sessionStorage, depending on how you store it
+       
+            const token = localStorage.getItem("token");
 
-const response = await axios.post(
-  "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers",
+            const response = await axios.post(
+                "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers",
+                {
+                    questionId: "iiqa1",
+                    answer: {
+                        collegeAISHEID: completeData.collegeAISHEID,
+                        cycleOfAccreditation: completeData.cycleOfAccreditation,
+                        collegeName: completeData.collegeName,
+                        establishmentDate: completeData.establishmentDate,
+                        ageOfInstitution: getAgeInYearsAndMonths(date),
+                        headOfInstitution: completeData.headOfInstitution,
+                        designation: completeData.designation,
+                        ownCampus: completeData.ownCampus,
+                        address: completeData.address,
+                        state: completeData.state,
+                        district: completeData.district,
+                        city: completeData.city,
+                        pin: completeData.pin,
+                        phoneNo: completeData.phoneNo,
+                        faxNo: completeData.faxNo,
+                        mobileNo: completeData.mobileNo,
+                        email: completeData.email,
+                        alternateEmail: completeData.alternateEmail,
+                        website: completeData.website,
+                        alternateFacultyName: completeData.alternateFacultyName,
+                        alternateAddress: completeData.alternateAddress,
+                        alternateState: completeData.alternateState,
+                        alternateDistrict: completeData.alternateDistrict,
+                        alternateCity: completeData.alternateCity,
+                        alternatePin: completeData.alternatePin,
+                        alternatePhoneNo: completeData.alternatePhoneNo,
+                        alternateFaxNo: completeData.alternateFaxNo,
+                        alternateMobileNo: completeData.alternateMobileNo,
+                        alternateFacultyEmail: completeData.alternateFacultyEmail,
+                        alternateFacultyAlternateEmail: completeData.alternateFacultyAlternateEmail,
+                    },
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-  {
-    questionId: "iiqa1",
-    answer: {
-      collegeAISHEID: completeData.collegeAISHEID,
-      cycleOfAccreditation: completeData.cycleOfAccreditation,
-      collegeName: completeData.collegeName,
-      establishmentDate: completeData.establishmentDate,
-      ageOfInstitution: getAgeInYearsAndMonths(date),
-      headOfInstitution: completeData.headOfInstitution,
-      designation: completeData.designation,
-      ownCampus: completeData.ownCampus,
-      address: completeData.address,
-      state: completeData.state,
-      district: completeData.district,
-      city: completeData.city,
-      pin: completeData.pin,
-      phoneNo: completeData.phoneNo,
-      faxNo: completeData.faxNo,
-      mobileNo: completeData.mobileNo,
-      email: completeData.email,
-      alternateEmail: completeData.alternateEmail,
-      website: completeData.website,
-      alternateFacultyName: completeData.alternateFacultyName,
-      alternateAddress: completeData.alternateAddress,
-      alternateState: completeData.alternateState,
-      alternateDistrict: completeData.alternateDistrict,
-      alternateCity: completeData.alternateCity,
-      alternatePin: completeData.alternatePin,
-      alternatePhoneNo: completeData.alternatePhoneNo,
-      alternateFaxNo: completeData.alternateFaxNo,
-      alternateMobileNo: completeData.alternateMobileNo,
-      alternateFacultyEmail: completeData.alternateFacultyEmail,
-      alternateFacultyAlternateEmail:
-        completeData.alternateFacultyAlternateEmail,
-    },
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`, // 🔑 send token
-      "Content-Type": "application/json",
-    },
-  }
-);
-
-console.log(response.data.message || "User data has been saved successfully!");
-
+            console.log(response.data.message || "User data has been saved successfully!");
+            
+            // Show success modal
+            setModalMessage('Basic eligibility information saved successfully!')
+            setShowSuccessModal(true)
+            
             await new Promise(resolve => setTimeout(resolve, 1000))
             console.log('✅ Basic eligibility saved successfully!')
             
         } catch (error) {
             console.error('❌ Error saving basic eligibility:', error)
-            // TODO: Add proper error handling/notification
+            
+            let errorMessage = 'An error occurred while saving the form';
+            if (typeof error === 'object' && error !== null && 'response' in error) {
+                const err = error as any;
+                errorMessage = `Server error: ${err.response?.status || 'Unknown'} ${err.response?.statusText || ''}`;
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+            
+            setModalMessage(errorMessage)
+            setShowSuccessModal(true)
         } finally {
             setIsSubmitting(false)
         }
     }
-
-useEffect(() => {
-  const fetchAnswers = async () => {
-    try {
-      const token = localStorage.getItem("token");
-    //   const collegeId = localStorage.getItem("collegeId");
-
-      const response = await axios.get(
-        `https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = response.data[0];
-      setFetchedData(data); // 👈 store in state
-
-      if (data && data.answer) {
-        // Ensure all fields have defined values to prevent controlled/uncontrolled input errors
-        const sanitizedAnswer = Object.keys(formData).reduce((acc, key) => {
-          acc[key] = data.answer[key] || '';
-          return acc;
-        }, {} as any);
-        setFormData(sanitizedAnswer);
-
-        if (data.answer.establishmentDate) {
-          setDate(new Date(data.answer.establishmentDate));
-        }
-
-        if (data.answer.state) {
-          setSelectedState(data.answer.state);
-          setDistricts(indiaData[data.answer.state as keyof typeof indiaData] || []);
-        }
-
-        if (data.answer.alternateState) {
-          setSelectedAlternateState(data.answer.alternateState);
-          setAlternateDistricts(indiaData[data.answer.alternateState as keyof typeof indiaData] || []);
-        }
-      }
-
-      console.log("📥 Retrieved data:", data);
-    } catch (error) {
-      console.error("❌ Error fetching answers:", error);
+    
+    function formatDate(date: Date | undefined) {
+        if (!date) return ""
+        const day = String(date.getDate()).padStart(2, "0")
+        const month = String(date.getMonth() + 1).padStart(2, "0")
+        const year = date.getFullYear()
+        return `${day}-${month}-${year}`
     }
-  };
 
-  fetchAnswers();
-}, []);
+    // convert "dd-mm-yyyy" string back to Date for Calendar
+    function parseDate(dateString: string): Date | undefined {
+        if (!dateString) return undefined
+        const [day, month, year] = dateString.split("-").map(Number)
+        return new Date(year, month - 1, day)
+    }
 
-// ✅ Auto select district when districts are populated
-useEffect(() => {
-  if (districts.length > 0 && fetchedData?.answer?.district) {
-    setSelectedDistrict(fetchedData.answer.district);
-  }
-}, [districts, fetchedData]);
+    useEffect(() => {
+        const fetchAnswers = async () => {
+            try {
+                const token = localStorage.getItem("token");
 
-// ✅ Auto select alternate district
-useEffect(() => {
-  if (alternateDistricts.length > 0 && fetchedData?.answer?.alternateDistrict) {
-    setSelectedAlternateDistrict(fetchedData.answer.alternateDistrict);
-  }
-}, [alternateDistricts, fetchedData]);
+                const response = await axios.get(
+                    `https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                );
+
+                const data = response.data[0];
+                setFetchedData(data);
+
+                if (data && data.answer) {
+                    // Ensure all fields have defined values to prevent controlled/uncontrolled input errors
+                    const sanitizedAnswer = Object.keys(formData).reduce((acc, key) => {
+                        acc[key] = data.answer[key] || '';
+                        return acc;
+                    }, {} as any);
+                    setFormData(sanitizedAnswer);
+
+                    if (data.answer.establishmentDate) {
+                        setDate(new Date(data.answer.establishmentDate));
+                    }
+
+                    if (data.answer.state) {
+                        setSelectedState(data.answer.state);
+                        setDistricts(indiaData[data.answer.state as keyof typeof indiaData] || []);
+                    }
+
+                    if (data.answer.alternateState) {
+                        setSelectedAlternateState(data.answer.alternateState);
+                        setAlternateDistricts(indiaData[data.answer.alternateState as keyof typeof indiaData] || []);
+                    }
+                }
+
+                console.log("📥 Retrieved data:", data);
+            } catch (error) {
+                console.error("❌ Error fetching answers:", error);
+            }
+        };
+
+        fetchAnswers();
+    }, []);
+
+    // ✅ Auto select district when districts are populated
+    useEffect(() => {
+        if (districts.length > 0 && fetchedData?.answer?.district) {
+            setSelectedDistrict(fetchedData.answer.district);
+        }
+    }, [districts, fetchedData]);
+
+    // ✅ Auto select alternate district
+    useEffect(() => {
+        if (alternateDistricts.length > 0 && fetchedData?.answer?.alternateDistrict) {
+            setSelectedAlternateDistrict(fetchedData.answer.alternateDistrict);
+        }
+    }, [alternateDistricts, fetchedData]);
 
     return (
-        <div className="w-full max-w-4xl mx-auto  flex flex-col">
-            <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {/* First field */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="College_AISHE_ID" className="text-sm font-medium w-40">
-                    College AISHE ID
-                </label>
-                <Input 
-                    required 
-                    id="College_AISHE_ID" 
-                    placeholder="C-12345" 
-                    className='w-80 text-sm'
-                    value={formData.collegeAISHEID}
-                    onChange={(e) => handleInputChange('collegeAISHEID', e.target.value)}
+        <TooltipProvider>
+            <div className="w-full max-w-6xl mx-auto h-full flex flex-col relative">
+                
+                {/* Success Modal */}
+                <SuccessModal 
+                    isOpen={showSuccessModal}
+                    onClose={() => setShowSuccessModal(false)}
+                    message={modalMessage}
                 />
-            </div>
 
-            {/* Second field */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Cycle_of_Accreditation" className="text-sm font-medium w-40">
-                    Cycle of Accreditation
-                </label>
-                <Select 
-                    required 
-                    value={formData.cycleOfAccreditation}
-                    onValueChange={(value) => handleInputChange('cycleOfAccreditation', value)}
-                >
-                    <SelectTrigger className="w-80 text-sm">
-                        <SelectValue placeholder="select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Cycle1">Cycle1</SelectItem>
-                        <SelectItem value="Cycle2">Cycle2</SelectItem>
-                        <SelectItem value="Cycle3">Cycle3</SelectItem>
-                        <SelectItem value="Cycle4">Cycle4</SelectItem>
-                        <SelectItem value="Cycle5">Cycle5</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="aishe" className="text-sm font-medium w-40">
-                    Name of the College as per AISHE Certificate
-                </label>
-                <Input 
-                    id="aishe" 
-                    placeholder="Enter College Name" 
-                    className='w-80 text-sm' 
-                    required 
-                    maxLength={1000}
-                    value={formData.collegeName}
-                    onChange={(e) => handleInputChange('collegeName', e.target.value)}
-                />
-            </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-
-
-                <Label htmlFor="date" className="text-sm font-medium w-40">
-                    Date of establishment of the Institution
-                </Label>
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                            variant="outline"
-                            id="date"
-                            className="w-80 justify-between font-light text-sm"
-                        >
-                            {date ? date.toLocaleDateString() : "Select date"}
-                            <ChevronDownIcon />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            captionLayout="dropdown"
-                            onSelect={(date) => {
-                                handleDateChange(date)
-                                setOpen(false)
-                            }}
-                            required
+                <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
+                
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="College_AISHE_ID" className="text-sm font-medium w-40">
+                                College AISHE ID
+                            </label>
+                            <InfoTooltip content="Enter the unique AISHE (All India Survey on Higher Education) ID assigned to your college by the Ministry of Education." />
+                        </div>
+                        <Input 
+                            required 
+                            id="College_AISHE_ID" 
+                            placeholder="C-12345" 
+                            className='w-80 text-sm'
+                            value={formData.collegeAISHEID}
+                            onChange={(e) => handleInputChange('collegeAISHEID', e.target.value)}
                         />
-                    </PopoverContent>
-                </Popover>
-            </div>
+                    </div>
 
+                    {/* Cycle of Accreditation */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Cycle_of_Accreditation" className="text-sm font-medium w-40">
+                                Cycle of Accreditation
+                            </label>
+                            <InfoTooltip content="Select the current cycle of accreditation your institution is applying for or has completed with NAAC." />
+                        </div>
+                        <Select 
+                            required 
+                            value={formData.cycleOfAccreditation}
+                            onValueChange={(value) => handleInputChange('cycleOfAccreditation', value)}
+                        >
+                            <SelectTrigger className="w-80 text-sm">
+                                <SelectValue placeholder="select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Cycle1">Cycle1</SelectItem>
+                                <SelectItem value="Cycle2">Cycle2</SelectItem>
+                                <SelectItem value="Cycle3">Cycle3</SelectItem>
+                                <SelectItem value="Cycle4">Cycle4</SelectItem>
+                                <SelectItem value="Cycle5">Cycle5</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
+                    {/* College Name */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="aishe" className="text-sm font-medium w-40">
+                                Name of the College as per AISHE Certificate
+                            </label>
+                            <InfoTooltip content="Enter the exact name of the college as mentioned in your AISHE certificate. This should match official documents." />
+                        </div>
+                        <Input 
+                            id="aishe" 
+                            placeholder="Enter College Name" 
+                            className='w-80 text-sm' 
+                            required 
+                            maxLength={1000}
+                            value={formData.collegeName}
+                            onChange={(e) => handleInputChange('collegeName', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Name_of_the_Head_of_the_Institution" className="text-sm font-medium w-40">
-                    Name of the Head of the Institution
-                </label>
-                <Input 
-                    required 
-                    id="Name_of_the_Head_of_the_Institution" 
-                    placeholder="Enter Name" 
-                    className='w-80 text-sm' 
-                    maxLength={255}
-                    value={formData.headOfInstitution}
-                    onChange={(e) => handleInputChange('headOfInstitution', e.target.value)}
-                />
-            </div>
+                    {/* Establishment Date */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <Label htmlFor="date" className="text-sm font-medium w-40">
+                                Date of establishment of the Institution
+                            </Label>
+                            <InfoTooltip content="Select the official date when the institution was established or founded. This date should match your registration documents." />
+                        </div>
+                        <Popover open={open} onOpenChange={setOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    id="date"
+                                    className="w-80 justify-between font-light text-sm"
+                                >
+                                    {date ? formatDate(date) : "Select date"}
+                                    <ChevronDownIcon />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    captionLayout="dropdown"
+                                    onSelect={(d) => {
+                                        handleDateChange(d)
+                                        setOpen(false)
+                                    }}
+                                    required
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Designation" className="text-sm font-medium w-40">
-                    Designation
-                </label>
-                <Select 
-                    required
-                    value={formData.designation}
-                    onValueChange={(value) => handleInputChange('designation', value)}
-                >
-                    <SelectTrigger className="w-80 text-sm">
-                        <SelectValue placeholder="select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Principal">Principal</SelectItem>
-                        <SelectItem value="Director">Director</SelectItem>
-                        <SelectItem value="Principal In charge">Principal In charge</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                    {/* Head of Institution */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Name_of_the_Head_of_the_Institution" className="text-sm font-medium w-40">
+                                Name of the Head of the Institution
+                            </label>
+                            <InfoTooltip content="Enter the full name of the current head of the institution (Principal, Director, etc.)" />
+                        </div>
+                        <Input 
+                            required 
+                            id="Name_of_the_Head_of_the_Institution" 
+                            placeholder="Enter Name" 
+                            className='w-80 text-sm' 
+                            maxLength={255}
+                            value={formData.headOfInstitution}
+                            onChange={(e) => handleInputChange('headOfInstitution', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Does_the_college_function_from_Own_Campus" className="text-sm font-medium w-40">
-                    Does the college function from Own Campus
-                </label>
-                <Select 
-                    required
-                    value={formData.ownCampus}
-                    onValueChange={(value) => handleInputChange('ownCampus', value)}
-                >
-                    <SelectTrigger className="w-80 text-sm">
-                        <SelectValue placeholder="select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="Yes">Yes</SelectItem>
-                        <SelectItem value="On_Lease">On Lease</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                    {/* Designation */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Designation" className="text-sm font-medium w-40">
+                                Designation
+                            </label>
+                            <InfoTooltip content="Select the official designation of the head of the institution." />
+                        </div>
+                        <Select 
+                            required
+                            value={formData.designation}
+                            onValueChange={(value) => handleInputChange('designation', value)}
+                        >
+                            <SelectTrigger className="w-80 text-sm">
+                                <SelectValue placeholder="select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Principal">Principal</SelectItem>
+                                <SelectItem value="Director">Director</SelectItem>
+                                <SelectItem value="Principal In charge">Principal In charge</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Address_of_the_College" className="text-sm font-medium w-40">
-                    Address of the College
-                </label>
-                <Input 
-                    required 
-                    id="Address_of_the_College" 
-                    placeholder="Enter Address" 
-                    className='w-80 text-sm'
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                />
-            </div>
+                    {/* Own Campus */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Does_the_college_function_from_Own_Campus" className="text-sm font-medium w-40">
+                                Does the college function from Own Campus
+                            </label>
+                            <InfoTooltip content="Select whether the college operates from its own campus or on a leased property." />
+                        </div>
+                        <Select 
+                            required
+                            value={formData.ownCampus}
+                            onValueChange={(value) => handleInputChange('ownCampus', value)}
+                        >
+                            <SelectTrigger className="w-80 text-sm">
+                                <SelectValue placeholder="select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Yes">Yes</SelectItem>
+                                <SelectItem value="On_Lease">On Lease</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
+                    {/* Address */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Address_of_the_College" className="text-sm font-medium w-40">
+                                Address of the College
+                            </label>
+                            <InfoTooltip content="Enter the complete postal address of the college including street, area, and locality." />
+                        </div>
+                        <Input 
+                            required 
+                            id="Address_of_the_College" 
+                            placeholder="Enter Address" 
+                            className='w-80 text-sm'
+                            value={formData.address}
+                            onChange={(e) => handleInputChange('address', e.target.value)}
+                        />
+                    </div>
 
+                    {/* State */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label className="text-sm font-medium w-40">State / Union Territory</label>
+                            <InfoTooltip content="Select the state or union territory where the college is located." />
+                        </div>
+                        <Select 
+                            required 
+                            onValueChange={handleStateChange}
+                            value={selectedState}
+                        >
+                            <SelectTrigger className="w-80 text-sm">
+                                <SelectValue placeholder="Select State/UT" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.keys(indiaData)
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((state) => (
+                                        <SelectItem key={state} value={state}>
+                                            {state}
+                                        </SelectItem>
+                                    ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-            {/* State / UT Selector */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label className="text-sm font-medium w-40">State / Union Territory</label>
-                <Select 
-  required 
-  onValueChange={handleStateChange}
-  value={selectedState}
->
-  <SelectTrigger className="w-80 text-sm">
-    <SelectValue placeholder="Select State/UT" />
-  </SelectTrigger>
-  <SelectContent>
-    {Object.keys(indiaData)
-      .sort((a, b) => a.localeCompare(b)) // sorts alphabetically
-      .map((state) => (
-        <SelectItem key={state} value={state}>
-          {state}
-        </SelectItem>
+                    {/* District */}
+                  <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
+  <div className="flex items-center">
+    <label htmlFor="district" className="text-sm font-medium w-40">
+      District
+    </label>
+    <InfoTooltip content="Select the district where the college is located. Please select state first." />
+  </div>
+  <Select 
+    required 
+    disabled={!selectedState} 
+    onValueChange={handleDistrictChange}
+    value={selectedDistrict}
+  >
+    <SelectTrigger className="w-80 text-sm">
+      <SelectValue placeholder={selectedState ? 'Select District' : 'Select State first'} />
+    </SelectTrigger>
+    <SelectContent>
+      {districts
+        .slice() // create a copy so original array isn’t mutated
+        .sort((a, b) => a.localeCompare(b)) // ascending alphabetical order
+        .map((district) => (
+          <SelectItem key={district} value={district}>
+            {district}
+          </SelectItem>
       ))}
-  </SelectContent>
-</Select>
+    </SelectContent>
+  </Select>
+</div>
 
-            </div>
 
-            {/* District Selector */}
-            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-                <label htmlFor="district" className="text-sm font-medium w-40">
-                    District
-                </label>
-                <Select 
-                    required 
-                    disabled={!selectedState} 
-                    onValueChange={handleDistrictChange}
-                    value={selectedDistrict}
-                >
-                    <SelectTrigger className="w-80 text-sm">
-                        <SelectValue placeholder={selectedState ? 'Select District' : 'Select State first'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {districts.map((district) => (
-                            <SelectItem key={district} value={district}>
-                                {district}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
- 
+                    {/* City */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="City" className="text-sm font-medium w-40">
+                                City 
+                            </label>
+                            <InfoTooltip content="Enter the name of the city where the college is located." />
+                        </div>
+                        <Input 
+                            required 
+                            id="City" 
+                            placeholder="Enter City" 
+                            className='w-80 text-sm'
+                            value={formData.city}
+                            onChange={(e) => handleInputChange('city', e.target.value)}
+                        />
+                    </div>
 
-            </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="City" className="text-sm font-medium w-40">
-                    City 
-                </label>
-                <Input 
-                    required 
-                    id="City" 
-                    placeholder="Enter City" 
-                    className='w-80 text-sm'
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                />
-            </div>
+                    {/* Pin */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Pin" className="text-sm font-medium w-40">
+                                Pin
+                            </label>
+                            <InfoTooltip content="Enter the 6-digit postal PIN code of the college location." />
+                        </div>
+                        <Input 
+                            type='text' 
+                            required 
+                            id="Pin" 
+                            placeholder="Enter Pin" 
+                            className='w-80 text-sm' 
+                            value={formData.pin}
+                            onChange={(e) => handleNumberInputChange('pin', e.target.value, 6)}
+                        />
+                    </div>
+                    
+                    {/* Phone No */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="PhoneNo" className="text-sm font-medium w-40">
+                                Phone No 
+                            </label>
+                            <InfoTooltip content="Enter the landline phone number of the college office." />
+                        </div>
+                        <Input 
+                            type='text' 
+                            required 
+                            id="PhoneNo" 
+                            placeholder="Enter Phone No" 
+                            className='w-80 text-sm' 
+                            value={formData.phoneNo}
+                            onChange={(e) => handleNumberInputChange('phoneNo', e.target.value, 10)}
+                        />
+                    </div>
+                      
+                    {/* Fax No */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="FaxNo" className="text-sm font-medium w-40">
+                                Fax No 
+                            </label>
+                            <InfoTooltip content="Enter the fax number of the college office if available." />
+                        </div>
+                        <Input 
+                            type='text' 
+                            required 
+                            id="FaxNo" 
+                            placeholder="Enter Fax No" 
+                            className='w-80 text-sm' 
+                            value={formData.faxNo}
+                            onChange={(e) => handleInputChange('faxNo', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Pin" className="text-sm font-medium w-40">
-                    Pin
-                </label>
-                <Input 
-                    type='text' 
-                    required 
-                    id="Pin" 
-                    placeholder="Enter Pin" 
-                    className='w-80 text-sm' 
-                    value={formData.pin}
-                    onChange={(e) => handleNumberInputChange('pin', e.target.value, 6)}
-                />
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="PhoneNo" className="text-sm font-medium w-40">
-                    Phone No 
-                </label>
-                <Input 
-                    type='text' 
-                    required 
-                    id="PhoneNo" 
-                    placeholder="Enter Phone No" 
-                    className='w-80 text-sm' 
-                    value={formData.phoneNo}
-                    onChange={(e) => handleNumberInputChange('phoneNo', e.target.value, 10)}
-                />
-            </div>
-              
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="FaxNo" className="text-sm font-medium w-40">
-                    Fax No 
-                </label>
-                <Input 
-                    type='text' 
-                    required 
-                    id="FaxNo" 
-                    placeholder="Enter Fax No" 
-                    className='w-80 text-sm' 
-                    value={formData.faxNo}
-                       onChange={(e) => handleInputChange('faxNo', e.target.value)}
-                />
-            </div>
+                    {/* Mobile No */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="MobileNo" className="text-sm font-medium w-40">
+                                Mobile No
+                            </label>
+                            <InfoTooltip content="Enter the mobile number of the head of institution or college office." />
+                        </div>
+                        <Input 
+                            type='text' 
+                            required 
+                            id="MobileNo" 
+                            placeholder="Enter Mobile No" 
+                            className='w-80 text-sm' 
+                            value={formData.mobileNo}
+                            onChange={(e) => handleNumberInputChange('mobileNo', e.target.value, 10)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="MobileNo" className="text-sm font-medium w-40">
-                    Mobile No
-                </label>
-                <Input 
-                    type='text' 
-                    required 
-                    id="MobileNo" 
-                    placeholder="Enter Mobile No" 
-                    className='w-80 text-sm' 
-                    value={formData.mobileNo}
-                    onChange={(e) => handleNumberInputChange('mobileNo', e.target.value, 10)}
-                />
-            </div>
+                    {/* Email */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Email" className="text-sm font-medium w-40">
+                                Email 
+                            </label>
+                            <InfoTooltip content="Enter the primary official email address of the college." />
+                        </div>
+                        <Input 
+                            type='email' 
+                            required 
+                            id="Email" 
+                            placeholder="Enter Email" 
+                            className='w-80 text-sm'
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Email" className="text-sm font-medium w-40">
-                    Email 
-                </label>
-                <Input 
-                    type='email' 
-                    required 
-                    id="Email" 
-                    placeholder="Enter Email" 
-                    className='w-80 text-sm'
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                />
-            </div>
+                    {/* Alternate Email */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Alternate_Email" className="text-sm font-medium w-40">
+                                Alternate Email 
+                            </label>
+                            <InfoTooltip content="Enter an alternate email address for the college for backup communication." />
+                        </div>
+                        <Input 
+                            type='email' 
+                            required 
+                            id="Alternate_Email" 
+                            placeholder="Enter Email" 
+                            className='w-80 text-sm'
+                            value={formData.alternateEmail}
+                            onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Alternate_Email" className="text-sm font-medium w-40">
-                    Alternate Email 
-                </label>
-                <Input 
-                    type='email' 
-                    required 
-                    id="Alternate_Email" 
-                    placeholder="Enter Email" 
-                    className='w-80 text-sm'
-                    value={formData.alternateEmail}
-                    onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
-                />
-            </div>
+                    {/* Website */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Website" className="text-sm font-medium w-40">
+                                Website 
+                            </label>
+                            <InfoTooltip content="Enter the official website URL of the college. Include http:// or https://" />
+                        </div>
+                        <Input 
+                            type='url' 
+                            required 
+                            id="Website" 
+                            placeholder="Website url" 
+                            className='w-80 text-sm'
+                            value={formData.website}
+                            onChange={(e) => handleInputChange('website', e.target.value)}
+                        />
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Website" className="text-sm font-medium w-40">
-                    Website 
-                </label>
-                <Input 
-                    type='url' 
-                    required 
-                    id="Website" 
-                    placeholder="Website url" 
-                    className='w-80 text-sm'
-                    value={formData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
-                />
-            </div>
+                    {/* Institution Age */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <div className="flex items-center">
+                            <label htmlFor="Institution_Age" className="text-sm font-medium w-40">
+                                Has the Institution completed 6 years of existence / Years of graduation of last two batches
+                            </label>
+                            <InfoTooltip content="This shows the calculated age of the institution based on the establishment date. Must be at least 6 years for NAAC accreditation." />
+                        </div>
+                        <p className="text-sm">
+                            {date ? `Age: ${getAgeInYearsAndMonths(date)}` : "Please select a date"}
+                        </p>
+                    </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <label htmlFor="Institution_Age" className="text-sm font-medium w-40">
-                    Has the Institution completed 6 years of existence / Years of graduation of last two batches
-                </label>
-                <p className="text-sm">
-                    {date ? `Age: ${getAgeInYearsAndMonths(date)}` : "Please select a date"}
-                </p>
-            </div>
+                    {/* Alternate Faculty Contact Information Section */}
+                    <div className="space-y-4 pt-6">
+                        <div className="flex items-center">
+                            <h3 className="text-md font-semibold text-gray-800 mb-4">Alternate Faculty Contact Information</h3>
+                            <InfoTooltip content="Provide contact details of an alternate faculty member (such as IQAC Coordinator) who can be contacted regarding accreditation matters." />
+                        </div>
+                        
+                        {/* Alternate Faculty Name */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_Faculty_Name" className="text-sm font-medium w-40">
+                                    Alternate Faculty Name (Ex. IQAC Coordinator/IQAC Director)
+                                </label>
+                                <InfoTooltip content="Enter the name of an alternate contact person, typically the IQAC Coordinator or Director." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_Faculty_Name" 
+                                placeholder="Enter Alternate Faculty Name" 
+                                className='w-80 text-sm'
+                                maxLength={255}
+                                value={formData.alternateFacultyName}
+                                onChange={(e) => handleInputChange('alternateFacultyName', e.target.value)}
+                            />
+                        </div>
 
-            {/* Alternate Faculty Contact Information Section */}
-            <div className="space-y-4 pt-6 ">
-                <h3 className="text-md font-semibold text-gray-800 mb-4">Alternate Faculty Contact Information</h3>
-                
-                {/* Alternate Faculty Name */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_Faculty_Name" className="text-sm font-medium w-40">
-                        Alternate Faculty Name (Ex. IQAC Coordinator/IQAC Director)
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_Faculty_Name" 
-                        placeholder="Enter Alternate Faculty Name" 
-                        className='w-80 text-sm'
-                        maxLength={255}
-                        value={formData.alternateFacultyName}
-                        onChange={(e) => handleInputChange('alternateFacultyName', e.target.value)}
-                    />
-                </div>
+                        {/* Alternate Address */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_Address" className="text-sm font-medium w-40">
+                                    Address
+                                </label>
+                                <InfoTooltip content="Enter the address of the alternate faculty contact person." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_Address" 
+                                placeholder="Enter Address" 
+                                className='w-80 text-sm'
+                                maxLength={255}
+                                value={formData.alternateAddress}
+                                onChange={(e) => handleInputChange('alternateAddress', e.target.value)}
+                            />
+                        </div>
 
-                {/* Alternate Address */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_Address" className="text-sm font-medium w-40">
-                        Address
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_Address" 
-                        placeholder="Enter Address" 
-                        className='w-80 text-sm'
-                        maxLength={255}
-                        value={formData.alternateAddress}
-                        onChange={(e) => handleInputChange('alternateAddress', e.target.value)}
-                    />
-                </div>
+                        {/* Alternate State Selector */}
+                        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
+                            <div className="flex items-center">
+                                <label htmlFor="alternate_state" className="text-sm font-medium w-40">
+                                    State/UT
+                                </label>
+                                <InfoTooltip content="Select the state or union territory for the alternate faculty contact." />
+                            </div>
+                            <Select 
+                                onValueChange={handleAlternateStateChange}
+                                value={selectedAlternateState}
+                            >
+                                <SelectTrigger className="w-80 text-sm">
+                                    <SelectValue placeholder="Select State/UT" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.keys(indiaData).map((state) => (
+                                        <SelectItem key={state} value={state}>
+                                            {state}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                {/* Alternate State Selector */}
-                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-                    <label htmlFor="alternate_state" className="text-sm font-medium w-40">
-                        State/UT
-                    </label>
-                    <Select 
-                        onValueChange={handleAlternateStateChange}
-                        value={selectedAlternateState}
+                        {/* Alternate District Selector */}
+                        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
+                            <div className="flex items-center">
+                                <label htmlFor="alternate_district" className="text-sm font-medium w-40">
+                                    District
+                                </label>
+                                <InfoTooltip content="Select the district for the alternate faculty contact." />
+                            </div>
+                            <Select 
+                                disabled={!selectedAlternateState} 
+                                onValueChange={handleAlternateDistrictChange}
+                                value={selectedAlternateDistrict}
+                            >
+                                <SelectTrigger className="w-80 text-sm">
+                                    <SelectValue placeholder={selectedAlternateState ? 'Select District' : 'Select State first'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {alternateDistricts.map((district) => (
+                                        <SelectItem key={district} value={district}>
+                                            {district}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Alternate City */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_City" className="text-sm font-medium w-40">
+                                    City 
+                                </label>
+                                <InfoTooltip content="Enter the city for the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                id="Alternate_City" 
+                                placeholder="Enter City" 
+                                className='w-80 text-sm'
+                                value={formData.alternateCity}
+                                onChange={(e) => handleInputChange('alternateCity', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Alternate Pin */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_Pin" className="text-sm font-medium w-40">
+                                    Pin
+                                </label>
+                                <InfoTooltip content="Enter the 6-digit postal PIN code for the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_Pin" 
+                                placeholder="Enter Pin" 
+                                className='w-80 text-sm' 
+                                value={formData.alternatePin}
+                                onChange={(e) => handleNumberInputChange('alternatePin', e.target.value, 6)}
+                            />
+                        </div>
+                        
+                        {/* Alternate Phone No */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_PhoneNo" className="text-sm font-medium w-40">
+                                    Phone No 
+                                </label>
+                                <InfoTooltip content="Enter the phone number of the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_PhoneNo" 
+                                placeholder="Enter Phone No" 
+                                className='w-80 text-sm' 
+                                value={formData.alternatePhoneNo}
+                                onChange={(e) => handleNumberInputChange('alternatePhoneNo', e.target.value,10)}
+                            />
+                        </div>
+                          
+                        {/* Alternate Fax No */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_FaxNo" className="text-sm font-medium w-40">
+                                    Fax No 
+                                </label>
+                                <InfoTooltip content="Enter the fax number of the alternate faculty contact if available." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_FaxNo" 
+                                placeholder="Enter Fax No" 
+                                className='w-80 text-sm' 
+                                value={formData.alternateFaxNo}
+                                onChange={(e) => handleInputChange('alternateFaxNo', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Alternate Mobile No */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_MobileNo" className="text-sm font-medium w-40">
+                                    Mobile No
+                                </label>
+                                <InfoTooltip content="Enter the mobile number of the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                type='text' 
+                                id="Alternate_MobileNo" 
+                                placeholder="Enter Mobile No" 
+                                className='w-80 text-sm' 
+                                value={formData.alternateMobileNo}
+                                onChange={(e) => handleNumberInputChange('alternateMobileNo', e.target.value, 10)}
+                            />
+                        </div>
+
+                        {/* Alternate Faculty Email */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_Faculty_Email" className="text-sm font-medium w-40">
+                                    Email 
+                                </label>
+                                <InfoTooltip content="Enter the email address of the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                type='email' 
+                                id="Alternate_Faculty_Email" 
+                                placeholder="Enter Email" 
+                                className='w-80 text-sm'
+                                value={formData.alternateFacultyEmail}
+                                onChange={(e) => handleInputChange('alternateFacultyEmail', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Alternate Faculty Alternate Email */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                            <div className="flex items-center">
+                                <label htmlFor="Alternate_Faculty_Alternate_Email" className="text-sm font-medium w-40">
+                                    Alternate Email 
+                                </label>
+                                <InfoTooltip content="Enter an alternate email address for the alternate faculty contact." />
+                            </div>
+                            <Input 
+                                type='email' 
+                                id="Alternate_Faculty_Alternate_Email" 
+                                placeholder="Enter Email" 
+                                className='w-80 text-sm'
+                                value={formData.alternateFacultyAlternateEmail}
+                                onChange={(e) => handleInputChange('alternateFacultyAlternateEmail', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </form>
+
+                {/* Mobile Save Button */}
+                <div className="flex justify-center">
+                <div className="lg:hidden mb-4 px-4">
+                    <Button 
+                        type="button"
+                        onClick={handleSubmit}
+                        className="w-[100px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                        disabled={isSubmitting}
                     >
-                        <SelectTrigger className="w-80 text-sm">
-                            <SelectValue placeholder="Select State/UT" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Object.keys(indiaData).map((state) => (
-                                <SelectItem key={state} value={state}>
-                                    {state}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {/* Alternate District Selector */}
-                <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4'>
-                    <label htmlFor="alternate_district" className="text-sm font-medium w-40">
-                        District
-                    </label>
-                    <Select 
-                        disabled={!selectedAlternateState} 
-                        onValueChange={handleAlternateDistrictChange}
-                        value={selectedAlternateDistrict}
-                    >
-                        <SelectTrigger className="w-80 text-sm">
-                            <SelectValue placeholder={selectedAlternateState ? 'Select District' : 'Select State first'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {alternateDistricts.map((district) => (
-                                <SelectItem key={district} value={district}>
-                                    {district}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {/* Alternate City */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_City" className="text-sm font-medium w-40">
-                        City 
-                    </label>
-                    <Input 
-                        id="Alternate_City" 
-                        placeholder="Enter City" 
-                        className='w-80 text-sm'
-                        value={formData.alternateCity}
-                        onChange={(e) => handleInputChange('alternateCity', e.target.value)}
-                    />
-                </div>
-
-                {/* Alternate Pin */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_Pin" className="text-sm font-medium w-40">
-                        Pin
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_Pin" 
-                        placeholder="Enter Pin" 
-                        className='w-80 text-sm' 
-                        value={formData.alternatePin}
-                        onChange={(e) => handleNumberInputChange('alternatePin', e.target.value, 6)}
-                    />
-                </div>
-                
-                {/* Alternate Phone No */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_PhoneNo" className="text-sm font-medium w-40">
-                        Phone No 
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_PhoneNo" 
-                        placeholder="Enter Phone No" 
-                        className='w-80 text-sm' 
-                        value={formData.alternatePhoneNo}
-                        onChange={(e) => handleInputChange('alternatePhoneNo', e.target.value)}
-                    />
-                </div>
-                  
-                {/* Alternate Fax No */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_FaxNo" className="text-sm font-medium w-40">
-                        Fax No 
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_FaxNo" 
-                        placeholder="Enter Fax No" 
-                        className='w-80 text-sm' 
-                        value={formData.alternateFaxNo}
-                        onChange={(e) => handleInputChange('alternateFaxNo', e.target.value)}
-                    />
-                </div>
-
-                {/* Alternate Mobile No */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_MobileNo" className="text-sm font-medium w-40">
-                        Mobile No
-                    </label>
-                    <Input 
-                        type='text' 
-                        id="Alternate_MobileNo" 
-                        placeholder="Enter Mobile No" 
-                        className='w-80 text-sm' 
-                        value={formData.alternateMobileNo}
-                        onChange={(e) => handleNumberInputChange('alternateMobileNo', e.target.value, 10)}
-                    />
-                </div>
-
-                {/* Alternate Faculty Email */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_Faculty_Email" className="text-sm font-medium w-40">
-                        Email 
-                    </label>
-                    <Input 
-                        type='email' 
-                        id="Alternate_Faculty_Email" 
-                        placeholder="Enter Email" 
-                        className='w-80 text-sm'
-                        value={formData.alternateFacultyEmail}
-                        onChange={(e) => handleInputChange('alternateFacultyEmail', e.target.value)}
-                    />
-                </div>
-
-                {/* Alternate Faculty Alternate Email */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                    <label htmlFor="Alternate_Faculty_Alternate_Email" className="text-sm font-medium w-40">
-                        Alternate Email 
-                    </label>
-                    <Input 
-                        type='email' 
-                        id="Alternate_Faculty_Alternate_Email" 
-                        placeholder="Enter Email" 
-                        className='w-80 text-sm'
-                        value={formData.alternateFacultyAlternateEmail}
-                        onChange={(e) => handleInputChange('alternateFacultyAlternateEmail', e.target.value)}
-                    />
+                        <Save className="h-5 w-5" />
+                        <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
+                    </Button>
                 </div>
             </div>
-
-            {/* Save Button */}
-            <div className="flex justify-center pt-6 pb-4">
-                <Button 
-                    type="submit" 
-                    className="px-8 py-2 bg-black text-white hover:bg-gray-800"
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? 'Saving...' : 'Save'}
-                </Button>
             </div>
-        </form>
-        </div>
 
+               
+                    
+                                               <div className="hidden lg:block">
+                                      
+                                         <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
+                            <Save className="h-5 w-5" />
+                                                  <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
+                                </Button>
+                                </div>
+        </TooltipProvider>
     )
 }

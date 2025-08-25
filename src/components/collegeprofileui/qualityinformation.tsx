@@ -4,13 +4,19 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Calendar } from "@/components/ui/calendar"
-import { ChevronDownIcon } from "lucide-react"
+import { ChevronDownIcon, Info, Save } from "lucide-react"
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
 import axios from 'axios'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip"
 
 // TypeScript interfaces for type safety
 interface StaffCounts {
@@ -52,13 +58,67 @@ interface QualityInformationFormData {
   id: string
 }
 
-// S3 Upload utility function
-const uploadFileToS3 = async (file: File): Promise<string | null> => {
+// Date formatting utilities
+const formatDate = (date: Date | undefined): string => {
+  if (!date) return ""
+  const day = String(date.getDate()).padStart(2, "0")
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const year = date.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
+const parseDate = (dateString: string): Date | undefined => {
+  if (!dateString) return undefined
+  
+  let day: number, month: number, year: number;
+  
+  // Handle both dd-mm-yyyy and yyyy-mm-dd formats
+  if (dateString.includes('-')) {
+    const parts = dateString.split("-")
+    if (parts[0].length === 4) {
+      // yyyy-mm-dd format
+      year = Number(parts[0])
+      month = Number(parts[1])
+      day = Number(parts[2])
+    } else {
+      // dd-mm-yyyy format
+      day = Number(parts[0])
+      month = Number(parts[1])
+      year = Number(parts[2])
+    }
+  } else {
+    return undefined
+  }
+  
+  // Create date at noon to avoid timezone issues
+  const date = new Date(year, month - 1, day, 12, 0, 0, 0)
+  return isNaN(date.getTime()) ? undefined : date
+}
+
+const dateToApiFormat = (date: Date | undefined): string => {
+  if (!date) return ''
+  // Create a new date at noon to avoid timezone issues
+  const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0)
+  return normalizedDate.toISOString().split('T')[0]
+}
+
+// S3 Upload utility function - Updated to match first code
+const uploadFileToS3 = async (file: File, collegeId: string, questionId: string): Promise<string | null> => {
   try {
     console.log('Starting file upload for:', file.name);
     
-    const response = await axios.get(
+    const fileName = file.name;
+    const fileExtension = fileName
+      .substring(fileName.lastIndexOf(".") + 1)
+      .toLowerCase();
+    
+    const response = await axios.post(
       "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/upload-url",
+      { 
+        collegeId, 
+        questionId, 
+        fileExtension 
+      },
       {
         timeout: 30000,
         headers: {
@@ -161,11 +221,108 @@ const calculateTotal = (male: string, female: string, transgender: string) => {
   return String(maleNum + femaleNum + transgenderNum)
 }
 
+// Tooltip component with better alignment
+const InfoTooltip = ({ content }: { content: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button 
+        type="button" 
+        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+        aria-label="More information"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p className="max-w-xs">{content}</p>
+    </TooltipContent>
+  </Tooltip>
+)
+
+// Success Modal Component
+const SuccessModal = ({ 
+  isOpen, 
+  onClose, 
+  message 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  message: string;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Success!</h3>
+          <p className="text-sm text-gray-600 mb-4">{message}</p>
+          <Button 
+            onClick={onClose}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
+          >
+            Continue
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Error Modal Component
+const ErrorModal = ({ 
+  isOpen, 
+  onClose, 
+  message 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  message: string;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed</h3>
+          <p className="text-sm text-gray-600 mb-4">{message}</p>
+          <Button 
+            onClick={onClose}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2"
+          >
+            OK
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Qualityinformation = () => {
   // State management
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [uploadProgress, setUploadProgress] = useState<string>('')
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [collegeId, setCollegeId] = useState<string>('')
   
   // Date popover states
   const [iqacDateOpen, setIqacDateOpen] = useState(false)
@@ -209,6 +366,13 @@ export const Qualityinformation = () => {
     const loadExistingData = async () => {
       try {
         setIsLoading(true);
+        
+        // Get collegeId from localStorage
+        const storedCollegeId = localStorage.getItem('collegeId');
+        if (storedCollegeId) {
+          setCollegeId(storedCollegeId);
+        }
+        
         const existingData = await fetchExistingData("iiqa4");
         
         if (existingData) {
@@ -238,12 +402,12 @@ export const Qualityinformation = () => {
             setObcCell(existingData.statutoryCommittees.obcCell || false);
           }
           
-          // Populate dates
+          // Populate dates with proper parsing
           if (existingData.iqacEstablishmentDate) {
-            setIqacDate(new Date(existingData.iqacEstablishmentDate));
+            setIqacDate(parseDate(existingData.iqacEstablishmentDate));
           }
           if (existingData.aisheUploadDate) {
-            setAisheDate(new Date(existingData.aisheUploadDate));
+            setAisheDate(parseDate(existingData.aisheUploadDate));
           }
           
           // Populate other fields
@@ -263,14 +427,16 @@ export const Qualityinformation = () => {
     loadExistingData();
   }, []);
 
-  // Validate file
-  const validateFile = (file: File, maxSize: number): boolean => {
+  // Validate file - Updated to 10MB
+  const validateFile = (file: File): boolean => {
     if (file.type !== 'application/pdf') {
-      alert('Please select a PDF file only')
+      setErrorMessage('Please select a PDF file only')
+      setShowErrorModal(true)
       return false
     }
-    if (file.size > maxSize * 1024 * 1024) {
-      alert(`File size must be less than ${maxSize}MB`)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage('File size must be less than 10MB')
+      setShowErrorModal(true)
       return false
     }
     return true
@@ -279,14 +445,19 @@ export const Qualityinformation = () => {
   // Handle file upload for Academic MoU
   const handleAcademicMouFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && validateFile(file, 10)) {
-      // Update the document first
+    if (file && validateFile(file)) {
+      // Check if collegeId is available
+      if (!collegeId) {
+        setErrorMessage('College ID not found. Please refresh the page and try again.')
+        setShowErrorModal(true)
+        return
+      }
+
       setAcademicMouDocument(file)
 
-      // Upload the file
       try {
         setUploadProgress(`Uploading Academic MoU document: ${file.name}...`)
-        const url = await uploadFileToS3(file)
+        const url = await uploadFileToS3(file, collegeId, 'iiqa4')
         if (url) {
           setAcademicMouDocumentUrl(url)
           setUploadProgress(`Academic MoU document uploaded successfully!`)
@@ -294,7 +465,9 @@ export const Qualityinformation = () => {
         }
       } catch (error) {
         console.error('Academic MoU document upload error:', error);
-        alert((error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`))
+        const errorMessage = error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`
+        setErrorMessage(errorMessage)
+        setShowErrorModal(true)
         setUploadProgress('')
       }
     }
@@ -303,14 +476,19 @@ export const Qualityinformation = () => {
   // Handle file upload for Certification Document
   const handleCertificationFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && validateFile(file, 5)) {
-      // Update the document first
+    if (file && validateFile(file)) {
+      // Check if collegeId is available
+      if (!collegeId) {
+        setErrorMessage('College ID not found. Please refresh the page and try again.')
+        setShowErrorModal(true)
+        return
+      }
+
       setCertificationDocument(file)
 
-      // Upload the file
       try {
         setUploadProgress(`Uploading certification document: ${file.name}...`)
-        const url = await uploadFileToS3(file)
+        const url = await uploadFileToS3(file, collegeId, 'iiqa4')
         if (url) {
           setCertificationDocumentUrl(url)
           setUploadProgress(`Certification document uploaded successfully!`)
@@ -318,7 +496,9 @@ export const Qualityinformation = () => {
         }
       } catch (error) {
         console.error('Certification document upload error:', error);
-        alert((error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`))
+        const errorMessage = error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`
+        setErrorMessage(errorMessage)
+        setShowErrorModal(true)
         setUploadProgress('')
       }
     }
@@ -431,14 +611,14 @@ export const Qualityinformation = () => {
         internalComplaintsCommittee,
         obcCell
       },
-      iqacEstablishmentDate: iqacDate ? iqacDate.toISOString().split('T')[0] : '',
+      iqacEstablishmentDate: dateToApiFormat(iqacDate),
       rtiDeclaration,
       rtiDeclarationUrl,
       academicMou,
-      academicMouDocument: null, // Don't include File objects in API call
+      academicMouDocument: null,
       academicMouDocumentUrl: academicMouDocumentUrl || undefined,
-      aisheUploadDate: aisheDate ? aisheDate.toISOString().split('T')[0] : '',
-      certificationDocument: null, // Don't include File objects in API call
+      aisheUploadDate: dateToApiFormat(aisheDate),
+      certificationDocument: null,
       certificationDocumentUrl: certificationDocumentUrl || undefined,
       id: "QIT4"
     }
@@ -454,7 +634,8 @@ export const Qualityinformation = () => {
       
       // Validate RTI URL if Yes is selected
       if (rtiDeclaration === 'Yes' && rtiDeclarationUrl && !isValidUrl(rtiDeclarationUrl)) {
-        alert('Please enter a valid URL for RTI declaration')
+        setErrorMessage('Please enter a valid URL for RTI declaration')
+        setShowErrorModal(true)
         return
       }
       
@@ -464,7 +645,9 @@ export const Qualityinformation = () => {
       const token = localStorage.getItem('token')
       
       if (!token) {
-        throw new Error('Authentication token not found. Please log in again.')
+        setErrorMessage('Authentication token not found. Please log in again.')
+        setShowErrorModal(true)
+        return
       }
 
       // Submit to your API
@@ -485,9 +668,11 @@ export const Qualityinformation = () => {
       
       if (response.data.message === "Answer saved") {
         setUploadProgress('Form submitted successfully!')
-        alert('Quality information saved successfully!')
+        setModalMessage('Quality information saved successfully!')
+        setShowSuccessModal(true)
       } else {
-        throw new Error('Unexpected response from server')
+        setErrorMessage('Unexpected response from server')
+        setShowErrorModal(true)
       }
       
     } catch (error) {
@@ -505,7 +690,8 @@ export const Qualityinformation = () => {
         errorMessage = error.message;
       }
       
-      alert(`Error: ${errorMessage}`)
+      setErrorMessage(errorMessage)
+      setShowErrorModal(true)
       setUploadProgress('')
     } finally {
       setIsSubmitting(false)
@@ -513,455 +699,546 @@ export const Qualityinformation = () => {
     }
   }
 
-
-
   return (
-    <div className="w-full max-w-6xl mx-auto max-h-[80vh] flex flex-col">
-      <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        
-        {/* Upload Progress Indicator */}
-        {uploadProgress && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-blue-800">{uploadProgress}</p>
-          </div>
-        )}
+    <TooltipProvider>
+      <div className="w-full max-w-6xl mx-auto h-full flex flex-col relative">
 
-        {/* Staff and Student Counts Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Staff and Student Information</h3>
+        {/* Success Modal */}
+        <SuccessModal 
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          message={modalMessage}
+        />
+
+        {/* Error Modal */}
+        <ErrorModal 
+          isOpen={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          message={errorMessage}
+        />
+
+        <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
           
-          {/* Teaching Staff Section */}
+          {/* Upload Progress Indicator */}
+          {uploadProgress && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">{uploadProgress}</p>
+            </div>
+          )}
+
+          {/* Staff and Student Counts Section */}
+          <div className="space-y-4" id="staff-student-section">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <h3 className="text-lg font-semibold text-gray-800">Staff and Student Information</h3>
+                <InfoTooltip content="Enter the total number of teaching staff, non-teaching staff, and students by gender. Numbers should be accurate and current." />
+              </div>
+            </div>
+            
+            {/* Teaching Staff Section */}
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <h4 className="text-sm font-medium">Number of Teaching Staff by employment status (permanent / temporary) and by gender</h4>
+                <InfoTooltip content="Include all teaching staff regardless of employment status (permanent/temporary/contractual). Count by gender categories." />
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full border border-gray-300 bg-white">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={teachingStaffMale}
+                          onChange={(e) => setTeachingStaffMale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={teachingStaffFemale}
+                          onChange={(e) => setTeachingStaffFemale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={teachingStaffTransgender}
+                          onChange={(e) => setTeachingStaffTransgender(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                        <div className="text-sm font-medium text-center">
+                          {calculateTotal(teachingStaffMale, teachingStaffFemale, teachingStaffTransgender)}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Non-Teaching Staff Section */}
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <h4 className="text-sm font-medium">Number of Non-Teaching Staff by employment status (permanent / temporary) and by gender</h4>
+                <InfoTooltip content="Include all administrative, technical, and support staff. Count by gender categories including permanent and temporary staff." />
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full border border-gray-300 bg-white">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={nonTeachingStaffMale}
+                          onChange={(e) => setNonTeachingStaffMale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={nonTeachingStaffFemale}
+                          onChange={(e) => setNonTeachingStaffFemale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={nonTeachingStaffTransgender}
+                          onChange={(e) => setNonTeachingStaffTransgender(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                        <div className="text-sm font-medium text-center">
+                          {calculateTotal(nonTeachingStaffMale, nonTeachingStaffFemale, nonTeachingStaffTransgender)}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Students on Roll Section */}
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <h4 className="text-sm font-medium">Number of Students on roll by gender</h4>
+                <InfoTooltip content="Total enrolled students currently on roll in the institution. Include all active students across all programs and levels." />
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full border border-gray-300 bg-white">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
+                      <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={studentsMale}
+                          onChange={(e) => setStudentsMale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={studentsFemale}
+                          onChange={(e) => setStudentsFemale(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Enter number"
+                          className="w-full text-sm"
+                          value={studentsTransgender}
+                          onChange={(e) => setStudentsTransgender(validateIntInput(e.target.value))}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-3 py-2 bg-gray-50">
+                        <div className="text-sm font-medium text-center">
+                          {calculateTotal(studentsMale, studentsFemale, studentsTransgender)}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Statutory Committees Section */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium mb-3">Number of Teaching Staff by employment status (permanent / temporary) and by gender</h4>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-300 bg-white">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={teachingStaffMale}
-                        onChange={(e) => setTeachingStaffMale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={teachingStaffFemale}
-                        onChange={(e) => setTeachingStaffFemale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={teachingStaffTransgender}
-                        onChange={(e) => setTeachingStaffTransgender(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
-                      <div className="text-sm font-medium text-center">
-                        {calculateTotal(teachingStaffMale, teachingStaffFemale, teachingStaffTransgender)}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Non-Teaching Staff Section */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium mb-3">Number of Non-Teaching Staff by employment status (permanent / temporary) and by gender</h4>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-300 bg-white">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={nonTeachingStaffMale}
-                        onChange={(e) => setNonTeachingStaffMale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={nonTeachingStaffFemale}
-                        onChange={(e) => setNonTeachingStaffFemale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={nonTeachingStaffTransgender}
-                        onChange={(e) => setNonTeachingStaffTransgender(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
-                      <div className="text-sm font-medium text-center">
-                        {calculateTotal(nonTeachingStaffMale, nonTeachingStaffFemale, nonTeachingStaffTransgender)}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Students on Roll Section */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-medium mb-3">Number of Students on roll by gender</h4>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-300 bg-white">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Male</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Female</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Transgender</th>
-                    <th className="border border-gray-300 px-3 py-2 text-sm font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={studentsMale}
-                        onChange={(e) => setStudentsMale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={studentsFemale}
-                        onChange={(e) => setStudentsFemale(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder="Enter number"
-                        className="w-full text-sm"
-                        value={studentsTransgender}
-                        onChange={(e) => setStudentsTransgender(validateIntInput(e.target.value))}
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 bg-gray-50">
-                      <div className="text-sm font-medium text-center">
-                        {calculateTotal(studentsMale, studentsFemale, studentsTransgender)}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Statutory Committees Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Statutory Committees</h3>
-          
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="sc-st-committee"
-                checked={scStCommittee}
-                onCheckedChange={(checked) => setScStCommittee(checked as boolean)}
-              />
-              <Label htmlFor="sc-st-committee" className="text-sm">Committee for SC/ST</Label>
+            <div className="flex items-center">
+              <h3 className="text-lg font-semibold text-gray-800">Statutory Committees</h3>
+              <InfoTooltip content="Select all statutory committees that are established and functional in your institution as per regulatory requirements." />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="minority-cell"
-                checked={minorityCell}
-                onCheckedChange={(checked) => setMinorityCell(checked as boolean)}
-              />
-              <Label htmlFor="minority-cell" className="text-sm">Minority cell</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="grievance-redressal-committee"
-                checked={grievanceRedressalCommittee}
-                onCheckedChange={(checked) => setGrievanceRedressalCommittee(checked as boolean)}
-              />
-              <Label htmlFor="grievance-redressal-committee" className="text-sm">Grievance Redressal Committee</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="internal-complaints-committee"
-                checked={internalComplaintsCommittee}
-                onCheckedChange={(checked) => setInternalComplaintsCommittee(checked as boolean)}
-              />
-              <Label htmlFor="internal-complaints-committee" className="text-sm">Internal Complaints Committee</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="obc-cell"
-                checked={obcCell}
-                onCheckedChange={(checked) => setObcCell(checked as boolean)}
-              />
-              <Label htmlFor="obc-cell" className="text-sm">OBC Cell</Label>
-            </div>
-          </div>
-        </div>
-
-        {/* Other Information Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Other Information</h3>
-          
-          {/* IQAC Establishment Date */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <Label className="text-sm font-medium w-40">
-              IQAC Establishment Date
-            </Label>
-            <Popover open={iqacDateOpen} onOpenChange={setIqacDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-80 justify-between font-normal text-sm"
-                >
-                  {iqacDate ? iqacDate.toLocaleDateString() : "Select date"}
-                  <ChevronDownIcon />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={iqacDate}
-                  captionLayout="dropdown"
-                  onSelect={(date) => {
-                    handleIqacDateChange(date)
-                    setIqacDateOpen(false)
-                  }}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="sc-st-committee"
+                  checked={scStCommittee}
+                  onCheckedChange={(checked) => setScStCommittee(checked as boolean)}
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* RTI Declaration */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <Label className="text-sm font-medium w-40">
-                RTI Declaration
-              </Label>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="rti-yes"
-                    name="rti-declaration"
-                    value="Yes"
-                    checked={rtiDeclaration === 'Yes'}
-                    onChange={(e) => setRtiDeclaration(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <Label htmlFor="rti-yes" className="text-sm">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="rti-no"
-                    name="rti-declaration"
-                    value="No"
-                    checked={rtiDeclaration === 'No'}
-                    onChange={(e) => setRtiDeclaration(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <Label htmlFor="rti-no" className="text-sm">No</Label>
-                </div>
-              </div>
-            </div>
-            
-            {rtiDeclaration === 'Yes' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <Label className="text-sm font-medium w-40">
-                  RTI Declaration URL
+                <Label htmlFor="sc-st-committee" className="text-sm flex items-center">
+                  Committee for SC/ST
+                  <InfoTooltip content="Committee established for Scheduled Castes and Scheduled Tribes welfare and grievances as per UGC guidelines." />
                 </Label>
-                <Input 
-                  type="url"
-                  placeholder="Enter URL (e.g., https://example.com)"
-                  className="w-80 text-sm"
-                  value={rtiDeclarationUrl}
-                  onChange={(e) => setRtiDeclarationUrl(e.target.value)}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="minority-cell"
+                  checked={minorityCell}
+                  onCheckedChange={(checked) => setMinorityCell(checked as boolean)}
                 />
+                <Label htmlFor="minority-cell" className="text-sm flex items-center">
+                  Minority cell
+                  <InfoTooltip content="Cell established for the welfare of minority community students and staff as per regulatory requirements." />
+                </Label>
               </div>
-            )}
-          </div>
-
-          {/* Academic MoU */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <Label className="text-sm font-medium w-40">
-                Academic MoU
-              </Label>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="mou-yes"
-                    name="academic-mou"
-                    value="Yes"
-                    checked={academicMou === 'Yes'}
-                    onChange={(e) => setAcademicMou(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <Label htmlFor="mou-yes" className="text-sm">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="mou-no"
-                    name="academic-mou"
-                    value="No"
-                    checked={academicMou === 'No'}
-                    onChange={(e) => setAcademicMou(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <Label htmlFor="mou-no" className="text-sm">No</Label>
-                </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="grievance-redressal-committee"
+                  checked={grievanceRedressalCommittee}
+                  onCheckedChange={(checked) => setGrievanceRedressalCommittee(checked as boolean)}
+                />
+                <Label htmlFor="grievance-redressal-committee" className="text-sm flex items-center">
+                  Grievance Redressal Committee
+                  <InfoTooltip content="Committee to address and resolve grievances of students, staff, and other stakeholders in a time-bound manner." />
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="internal-complaints-committee"
+                  checked={internalComplaintsCommittee}
+                  onCheckedChange={(checked) => setInternalComplaintsCommittee(checked as boolean)}
+                />
+                <Label htmlFor="internal-complaints-committee" className="text-sm flex items-center">
+                  Internal Complaints Committee
+                  <InfoTooltip content="Committee established as per Sexual Harassment Act 2013 to address complaints of sexual harassment at workplace." />
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="obc-cell"
+                  checked={obcCell}
+                  onCheckedChange={(checked) => setObcCell(checked as boolean)}
+                />
+                <Label htmlFor="obc-cell" className="text-sm flex items-center">
+                  OBC Cell
+                  <InfoTooltip content="Cell established for Other Backward Classes welfare and to ensure their rights and benefits as per government guidelines." />
+                </Label>
               </div>
             </div>
+          </div>
+
+          {/* Other Information Section */}
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <h3 className="text-lg font-semibold text-gray-800">Other Information</h3>
+              <InfoTooltip content="Additional institutional information including IQAC details, RTI compliance, MoUs, and certifications." />
+            </div>
             
-            {academicMou === 'Yes' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                <Label className="text-sm font-medium w-40">
-                  Academic MoU Document
+            {/* IQAC Establishment Date */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-40">
+                  IQAC Establishment Date
                 </Label>
-                <div className="space-y-1">
+                <InfoTooltip content="Date when Internal Quality Assurance Cell (IQAC) was established in the institution. Format: DD-MM-YYYY" />
+              </div>
+              <Popover open={iqacDateOpen} onOpenChange={setIqacDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-80 justify-between font-normal text-sm"
+                  >
+                    {iqacDate ? formatDate(iqacDate) : "Select date"}
+                    <ChevronDownIcon />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={iqacDate}
+                    captionLayout="dropdown"
+                    onSelect={(date) => {
+                      handleIqacDateChange(date)
+                      setIqacDateOpen(false)
+                    }}
+                    fromYear={1900}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* RTI Declaration */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                <div className="flex items-center">
+                  <Label className="text-sm font-medium w-full sm:w-40">
+                    RTI Declaration
+                  </Label>
+                  <InfoTooltip content="Whether the institution has published RTI (Right to Information) declaration on its website as per RTI Act 2005." />
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="rti-yes"
+                      name="rti-declaration"
+                      value="Yes"
+                      checked={rtiDeclaration === 'Yes'}
+                      onChange={(e) => setRtiDeclaration(e.target.value)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Label htmlFor="rti-yes" className="text-sm">Yes</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="rti-no"
+                      name="rti-declaration"
+                      value="No"
+                      checked={rtiDeclaration === 'No'}
+                      onChange={(e) => setRtiDeclaration(e.target.value)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Label htmlFor="rti-no" className="text-sm">No</Label>
+                  </div>
+                </div>
+              </div>
+              
+              {rtiDeclaration === 'Yes' && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center">
+                    <Label className="text-sm font-medium w-full sm:w-40">
+                      RTI Declaration URL
+                    </Label>
+                    <InfoTooltip content="Provide the web URL where RTI declaration is published on your institution's website." />
+                  </div>
                   <Input 
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleAcademicMouFileChange}
-                    className="w-80 text-sm"
-                  />
-                  <p className="text-xs text-gray-500">
-                    PDF only (10MB Max.)
-                  </p>
-                  <FileControl
-                    documentUrl={academicMouDocumentUrl}
-                    document={academicMouDocument}
-                    onRemove={removeAcademicMouDocument}
-                    documentName="Academic MoU Document"
+                    type="url"
+                    placeholder="Enter URL (e.g., https://example.com)"
+                    className="w-full sm:w-80 text-sm"
+                    value={rtiDeclarationUrl}
+                    onChange={(e) => setRtiDeclarationUrl(e.target.value)}
                   />
                 </div>
+              )}
+            </div>
+
+            {/* Academic MoU */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                <div className="flex items-center">
+                  <Label className="text-sm font-medium w-full sm:w-40">
+                    Academic MoU
+                  </Label>
+                  <InfoTooltip content="Whether the institution has signed academic Memorandum of Understanding (MoU) with other institutions for academic collaboration." />
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="mou-yes"
+                      name="academic-mou"
+                      value="Yes"
+                      checked={academicMou === 'Yes'}
+                      onChange={(e) => setAcademicMou(e.target.value)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Label htmlFor="mou-yes" className="text-sm">Yes</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="mou-no"
+                      name="academic-mou"
+                      value="No"
+                      checked={academicMou === 'No'}
+                      onChange={(e) => setAcademicMou(e.target.value)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Label htmlFor="mou-no" className="text-sm">No</Label>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+              
+              {academicMou === 'Yes' && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center">
+                    <Label className="text-sm font-medium w-full sm:w-40">
+                      Academic MoU Document
+                    </Label>
+                    <InfoTooltip content="Upload signed academic MoU document(s). PDF format only, maximum 10MB." />
+                  </div>
+                  <div className="space-y-1 w-full sm:w-80">
+                    <Input 
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleAcademicMouFileChange}
+                      className="w-full text-sm"
+                    />
+                    <p className="text-xs text-gray-500">
+                      PDF only (10MB Max.)
+                    </p>
+                    <FileControl
+                      documentUrl={academicMouDocumentUrl}
+                      document={academicMouDocument}
+                      onRemove={removeAcademicMouDocument}
+                      documentName="Academic MoU Document"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
-          {/* AISHE Upload Date */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <Label className="text-sm font-medium w-40">
-              AISHE Upload Date
-            </Label>
-            <Popover open={aisheDateOpen} onOpenChange={setAisheDateOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-80 justify-between font-normal text-sm"
-                >
-                  {aisheDate ? aisheDate.toLocaleDateString() : "Select date"}
-                  <ChevronDownIcon />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={aisheDate}
-                  captionLayout="dropdown"
-                  onSelect={(date) => {
-                    handleAisheDateChange(date)
-                    setAisheDateOpen(false)
-                  }}
+            {/* AISHE Upload Date */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-40">
+                  AISHE Upload Date
+                </Label>
+                <InfoTooltip content="Date when institution data was last uploaded to AISHE (All India Survey on Higher Education) portal. Format: DD-MM-YYYY" />
+              </div>
+              <Popover open={aisheDateOpen} onOpenChange={setAisheDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-80 justify-between font-normal text-sm"
+                  >
+                    {aisheDate ? formatDate(aisheDate) : "Select date"}
+                    <ChevronDownIcon />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={aisheDate}
+                    captionLayout="dropdown"
+                    onSelect={(date) => {
+                      handleAisheDateChange(date)
+                      setAisheDateOpen(false)
+                    }}
+                    fromYear={2010}
+                    toYear={new Date().getFullYear()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Certification Document */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-40">
+                  Certification Document
+                </Label>
+                <InfoTooltip content="Upload any relevant institutional certification documents such as accreditation certificates, recognition letters, etc. PDF format only, maximum 10MB." />
+              </div>
+              <div className="space-y-1 w-full sm:w-80">
+                <Input 
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleCertificationFileChange}
+                  className="w-full text-sm"
                 />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Certification Document */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <Label className="text-sm font-medium w-40">
-              Certification Document
-            </Label>
-            <div className="space-y-1">
-              <Input 
-                type="file"
-                accept=".pdf"
-                onChange={handleCertificationFileChange}
-                className="w-80 text-sm"
-              />
-              <p className="text-xs text-gray-500">
-                PDF only (5MB Max.)
-              </p>
-              <FileControl
-                documentUrl={certificationDocumentUrl}
-                document={certificationDocument}
-                onRemove={removeCertificationDocument}
-                documentName="Certification Document"
-              />
+                <p className="text-xs text-gray-500">
+                  PDF only (10MB Max.)
+                </p>
+                <FileControl
+                  documentUrl={certificationDocumentUrl}
+                  document={certificationDocument}
+                  onRemove={removeCertificationDocument}
+                  documentName="Certification Document"
+                />
+              </div>
             </div>
           </div>
+        </form>
+        
+        {/* Mobile Save Button */}
+        <div className="flex justify-center">
+          <div className="lg:hidden mb-4 px-4">
+            <Button 
+              type="button"
+              onClick={handleSubmit}
+              className="w-[100px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
+              disabled={isSubmitting}
+            >
+              <Save className="h-5 w-5" />
+              <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
+            </Button>
+          </div>
         </div>
-
-        {/* Save Button */}
-        <div className="flex justify-center pt-6 pb-4">
+        
+        {/* Desktop Floating Save Button */}
+        <div className="hidden lg:block">
           <Button 
-            type="submit" 
-            className="px-8 py-2 bg-black text-white hover:bg-gray-800"
+            onClick={handleSubmit} 
+            className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : 'Save'}
+            <Save className="h-5 w-5" />
+            <span className="ml-2">{isSubmitting ? 'Saving...' : 'Save'}</span>
           </Button>
         </div>
-      </form>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
