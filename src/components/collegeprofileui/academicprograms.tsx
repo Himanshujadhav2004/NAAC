@@ -38,6 +38,31 @@ interface ProgrammeDetail {
   documentUrl?: string
 }
 
+// API Response interfaces
+interface ApiAnswer {
+  questionId: string
+  answer: AcademicProgramsFormData
+}
+
+interface ApiError {
+  response?: {
+    status: number
+    statusText: string
+  }
+  code?: string
+  message?: string
+}
+
+interface ExistingProgrammeDetail {
+  id: string
+  program: string
+  department: string
+  universityAffiliation: string
+  sraRecognition: string
+  affiliationStatus: string
+  documentUrl?: string
+}
+
 // S3 Upload utility function
 const uploadFileToS3 = async (file: File, collegeId: string, questionId: string): Promise<string | null> => {
   try {
@@ -147,9 +172,9 @@ const fetchExistingData = async (questionId: string): Promise<AcademicProgramsFo
     );
 
     console.log("GET response:", response.data);
-    const allAnswers = response.data;
+    const allAnswers = response.data as ApiAnswer[];
 
-    const iiqa3Data = allAnswers.find((item: { questionId: string }) => item.questionId === "iiqa3");
+    const iiqa3Data = allAnswers.find((item: ApiAnswer) => item.questionId === "iiqa3");
 
     if (iiqa3Data && iiqa3Data.answer) {
       console.log("iiqa3 answer:", iiqa3Data.answer);
@@ -318,7 +343,7 @@ export const Academicprograms = () => {
           
           // Populate programme details
           if (existingData.programmeDetails && existingData.programmeDetails.length > 0) {
-            const programmeList = existingData.programmeDetails.map((programme: any) => ({
+            const programmeList = existingData.programmeDetails.map((programme: ExistingProgrammeDetail) => ({
               id: programme.id || Date.now().toString(),
               program: programme.program || '',
               department: programme.department || '',
@@ -558,15 +583,16 @@ export const Academicprograms = () => {
       console.error('Error saving academic programs:', error)
       let errorMessage = 'An unknown error occurred';
       
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
+      const apiError = error as ApiError;
+      
+      if (apiError.code === 'ERR_NETWORK') {
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
+      } else if (apiError.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout. Please try again.';
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
-        const err = error as any;
-        errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
+      } else if (apiError.response) {
+        errorMessage = `Server error: ${apiError.response.status} ${apiError.response.statusText}`;
+      } else if (apiError.message) {
+        errorMessage = apiError.message;
       }
       
       setErrorMessage(errorMessage)
