@@ -659,7 +659,7 @@ export const Academicprograms = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center">
                 <Label className="text-sm font-medium w-40">
-                  Post Master's (DM, Ayurveda Vachaspathi, M.Ch)
+                  Post Masters DM, Ayurveda Vachaspathi MCh
                 </Label>
                 <InfoTooltip content="Number of post-master's specialized programs like Doctor of Medicine (DM), Master of Chirurgiae (M.Ch), etc." />
               </div>

@@ -109,12 +109,17 @@ const [successMsg, setSuccessMsg] = useState("");
       console.log("✅ Login successful, token stored.");
       setSuccessMsg("Login successful!");
       router.push("/dashboard");
-    } catch (error: any) {
-      console.error("❌ OTP verification failed:", error);
-      setErrorMsg(
-        error.response?.data?.message || "Invalid OTP. Please try again."
-      );
-    } finally {
+    } catch (error: unknown) {
+  console.error("❌ OTP verification failed:", error);
+
+  if (error instanceof AxiosError) {
+    setErrorMsg(error.response?.data?.message || "Invalid OTP. Please try again.");
+  } else if (error instanceof Error) {
+    setErrorMsg(error.message);
+  } else {
+    setErrorMsg("Invalid OTP. Please try again.");
+  }
+}finally {
       setLoading(false);
     }
   };

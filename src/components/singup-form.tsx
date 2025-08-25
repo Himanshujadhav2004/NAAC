@@ -145,12 +145,17 @@ export function SignupForm({
         router.push("/dashboard");
       }, 1500);
 
-    } catch (error: any) {
-      console.error("❌ OTP verification failed:", error);
-      setError(
-        error.response?.data?.message || "Invalid OTP. Please try again."
-      );
-    } finally {
+    } catch (error: unknown) {
+  console.error("❌ OTP verification failed:", error);
+
+  if (error instanceof AxiosError) {
+    setError(error.response?.data?.message || "Invalid OTP. Please try again.");
+  } else if (error instanceof Error) {
+    setError(error.message);
+  } else {
+    setError("Invalid OTP. Please try again.");
+  }}
+   finally {
       setLoading(false);
     }
   };
@@ -285,7 +290,7 @@ export function SignupForm({
                     2. Scan the QR code above
                   </p>
                   <p className="text-sm text-gray-600">
-                    3. Click "Continue" once you've added the account
+                    3. Click Continue once you've added the account
                   </p>
                 </div>
               </div>
