@@ -61,12 +61,21 @@ export function ForgotPasswordForm({
         router.push("/login");
       }, 2000);
       
-    } catch (error: any) {
-      console.error("❌ Password reset failed:", error);
-      setErrorMsg(
-        error.response?.data?.message || "Password reset failed. Please try again."
-      );
-    } finally {
+    } catch (error: unknown) {
+  console.error("❌ Password reset failed:", error);
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  ) {
+    const err = error as { response?: { data?: { message?: string } } };
+    setErrorMsg(err.response?.data?.message || "Password reset failed. Please try again.");
+  } else if (error instanceof Error) {
+    setErrorMsg(error.message);
+  } else {
+    setErrorMsg("Password reset failed. Please try again.");
+  }} finally {
       setLoading(false);
     }
   };

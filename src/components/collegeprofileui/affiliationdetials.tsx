@@ -1105,7 +1105,7 @@ export const Affiliationdetials = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
               <Label className="text-sm font-medium w-40">
-                Is the institution recognised as a 'College with Potential for Excellence (CPE)' by the UGC?
+                Is the institution recognised as a 'College with Potential for Excellence CPE' by the UGC?
               </Label>
               <InfoTooltip content="CPE is a UGC scheme to support colleges with potential for excellence by providing additional grants and autonomy." />
             </div>
@@ -1164,7 +1164,7 @@ export const Affiliationdetials = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
               <Label className="text-sm font-medium w-40">
-                Is the institution recognised as a 'College of Excellence' by the UGC?
+                Is the institution recognised as a College of Excellence by the UGC?
               </Label>
               <InfoTooltip content="College of Excellence is a prestigious recognition given by UGC to institutions demonstrating exceptional academic performance." />
             </div>

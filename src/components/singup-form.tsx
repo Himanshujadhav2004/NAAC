@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from 'next/link';
 import axios from 'axios'
+import { AxiosError } from "axios"
 import { useState } from "react"
 import { useRouter } from "next/navigation";
 import {
@@ -78,10 +79,16 @@ export function SignupForm({
         setStep(2); // Move to QR code step
       }
 
-    } catch (err: any) {
-      console.error("Signup error", err);
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
-    } finally {
+    } catch (err: unknown) {
+  console.error("Signup error", err);
+
+  if (err instanceof AxiosError) {
+    setError(err.response?.data?.message || "Registration failed. Please try again.");
+  } else if (err instanceof Error) {
+    setError(err.message);
+  } else {
+    setError("Registration failed. Please try again.");
+  }} finally {
       setLoading(false);
     }
   };
@@ -131,7 +138,7 @@ export function SignupForm({
       localStorage.setItem("userName", email);
       localStorage.setItem("collegeId", collegeId);
 
-      console.log("✅ Signup completed successfully");
+     
       setSuccess("Account verified successfully! Redirecting to dashboard...");
       
       setTimeout(() => {
@@ -272,7 +279,7 @@ export function SignupForm({
                 )}
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">
-                    1. Open your authenticator app (Google Authenticator, Authy, etc.)
+                    1. Open your authenticator app Google Authenticator, Authy, etc.
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
                     2. Scan the QR code above

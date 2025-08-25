@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { AxiosError } from "axios";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,10 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { set } from "date-fns";
+type VerifyOtpResponse = {
+  token: string;
+  collegeId: string;
+};
 
 export function LoginForm({
   className,
@@ -60,10 +64,17 @@ const [successMsg, setSuccessMsg] = useState("");
       console.log("✅ Step1 success:", message);
       setTempToken(tempToken);
       setStep(2);
-    } catch (error: any) {
-      console.error("❌ Step1 failed:", error);
-      setErrorMsg(error.response?.data?.message || "Login failed. Try again.");
-    } finally {
+    } catch (error: unknown) {
+  console.error("❌ Step1 failed:", error);
+
+  if (error instanceof AxiosError) {
+    setErrorMsg(error.response?.data?.message || "Login failed. Try again.");
+  } else if (error instanceof Error) {
+    setErrorMsg(error.message);
+  } else {
+    setErrorMsg("Login failed. Try again.");
+  }
+} finally {
       setLoading(false);
     }
   };
@@ -75,7 +86,7 @@ const [successMsg, setSuccessMsg] = useState("");
     setErrorMsg("");
 
     try {
-      const response = await axios.post(
+      const response = await axios.post<VerifyOtpResponse>(
         "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login/step2",
         {
           totpToken: otp,
