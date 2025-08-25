@@ -377,12 +377,16 @@ export const Basiceligibilty = () => {
                 setFetchedData(data);
 
                 if (data && data.answer) {
-                    // Ensure all fields have defined values to prevent controlled/uncontrolled input errors
-                    const sanitizedAnswer = Object.keys(formData).reduce((acc, key) => {
-                        acc[key] = data.answer[key] || '';
-                        return acc;
-                    }, {} as any);
-                    setFormData(sanitizedAnswer);
+    // Ensure all fields have defined values to prevent controlled/uncontrolled input errors
+    const sanitizedAnswer = Object.keys(formData).reduce((acc, key) => {
+        const typedKey = key as keyof CollegeFormData;
+        acc[typedKey] = data.answer[typedKey] || '';
+        return acc;
+    }, {} as CollegeFormData);
+    setFormData(sanitizedAnswer);
+    // ... rest of the code
+
+                    
 
                     if (data.answer.establishmentDate) {
                         setDate(new Date(data.answer.establishmentDate));
