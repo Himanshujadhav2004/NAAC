@@ -698,25 +698,31 @@ export const Qualityinformation = () => {
         setShowErrorModal(true)
       }
       
-    } catch (error) {
-      console.error('Error saving quality information:', error)
-      let errorMessage = 'An unknown error occurred';
-      
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout. Please try again.';
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
-        const err = error as any;
-        errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      setErrorMessage(errorMessage)
-      setShowErrorModal(true)
-      setUploadProgress('')
-    } finally {
+    } catch (error: unknown) {
+  console.error("❌ Error saving quality information:", error);
+
+  let errorMessage = "An unknown error occurred";
+
+  if (error && typeof error === "object") {
+    const err = error as { code?: string; response?: any; message?: string };
+
+    if (err.code === "ERR_NETWORK") {
+      errorMessage =
+        "Network error. Please check your internet connection and try again.";
+    } else if (err.code === "ECONNABORTED") {
+      errorMessage = "Request timeout. Please try again.";
+    } else if (err.response) {
+      errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+  }
+
+  setErrorMessage(errorMessage);
+  setShowErrorModal(true);
+  setUploadProgress("");
+}
+finally {
       setIsSubmitting(false)
       setTimeout(() => setUploadProgress(''), 3000)
     }
