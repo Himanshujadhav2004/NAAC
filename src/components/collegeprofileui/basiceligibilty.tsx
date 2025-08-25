@@ -320,20 +320,26 @@ export const Basiceligibilty = () => {
             await new Promise(resolve => setTimeout(resolve, 1000))
             console.log('✅ Basic eligibility saved successfully!')
             
-        } catch (error:unknown) {
-            console.error('❌ Error saving basic eligibility:', error)
-            
-            let errorMessage = 'An error occurred while saving the form';
-            if (typeof error === 'object' && error !== null && 'response' in error) {
-                const err = error as any;
-                errorMessage = `Server error: ${err.response?.status || 'Unknown'} ${err.response?.statusText || ''}`;
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            
-            // setModalMessage(errorMessage)
+        } catch (error: unknown) {
+  console.error("❌ Error saving basic eligibility:", error);
+
+  let errorMessage = "An error occurred while saving the form";
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object"
+  ) {
+    const resp = (error as { response?: { status?: number; statusText?: string } }).response;
+    errorMessage = `Server error: ${resp?.status ?? "Unknown"} ${resp?.statusText ?? ""}`;
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+}
+ // setModalMessage(errorMessage)
             // setShowSuccessModal(true)
-        } finally {
+        finally {
             setIsSubmitting(false)
         }
     }

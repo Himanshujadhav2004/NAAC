@@ -625,11 +625,11 @@ export const Academicprograms = () => {
         <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
           
           {/* Upload Progress Indicator */}
-          {uploadProgress && (
+          {/* {uploadProgress && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800">{uploadProgress}</p>
             </div>
-          )}
+          )} */}
 
           {/* Integer Input Fields Section */}
           <div className="space-y-4">

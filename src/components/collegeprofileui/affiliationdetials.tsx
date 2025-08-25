@@ -798,11 +798,11 @@ export const Affiliationdetials = () => {
           </div>
           
           {/* Upload Progress Indicator */}
-          {uploadProgress && (
+          {/* {uploadProgress && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800">{uploadProgress}</p>
             </div>
-          )}
+          )} */}
 
           {/* Nature of College Section */}
      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">

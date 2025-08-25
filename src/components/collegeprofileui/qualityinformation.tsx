@@ -704,19 +704,23 @@ export const Qualityinformation = () => {
   let errorMessage = "An unknown error occurred";
 
   if (error && typeof error === "object") {
-    const err = error as { code?: string; response?: any; message?: string };
+    const err = error as { code?: string; response?: unknown; message?: string };
 
     if (err.code === "ERR_NETWORK") {
       errorMessage =
         "Network error. Please check your internet connection and try again.";
     } else if (err.code === "ECONNABORTED") {
       errorMessage = "Request timeout. Please try again.";
-    } else if (err.response) {
-      errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
+    } else if (err.response && typeof err.response === "object") {
+      const resp = err.response as { status?: number; statusText?: string };
+      errorMessage = `Server error: ${resp.status ?? "Unknown"} ${
+        resp.statusText ?? ""
+      }`;
     } else if (err.message) {
       errorMessage = err.message;
     }
   }
+
 
   setErrorMessage(errorMessage);
   setShowErrorModal(true);
@@ -749,11 +753,11 @@ finally {
         <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
           
           {/* Upload Progress Indicator */}
-          {uploadProgress && (
+          {/* {uploadProgress && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800">{uploadProgress}</p>
             </div>
-          )}
+          )} */}
 
           {/* Staff and Student Counts Section */}
           <div className="space-y-4" id="staff-student-section">
