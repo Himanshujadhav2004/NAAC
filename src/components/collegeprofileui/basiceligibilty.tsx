@@ -322,8 +322,8 @@ export const Basiceligibilty = () => {
                 errorMessage = error.message;
             }
             
-            setModalMessage(errorMessage)
-            setShowSuccessModal(true)
+            // setModalMessage(errorMessage)
+            // setShowSuccessModal(true)
         } finally {
             setIsSubmitting(false)
         }
@@ -338,11 +338,11 @@ export const Basiceligibilty = () => {
     }
 
     // convert "dd-mm-yyyy" string back to Date for Calendar
-    function parseDate(dateString: string): Date | undefined {
-        if (!dateString) return undefined
-        const [day, month, year] = dateString.split("-").map(Number)
-        return new Date(year, month - 1, day)
-    }
+    // function parseDate(dateString: string): Date | undefined {
+    //     if (!dateString) return undefined
+    //     const [day, month, year] = dateString.split("-").map(Number)
+    //     return new Date(year, month - 1, day)
+    // }
 
     useEffect(() => {
         const fetchAnswers = async () => {

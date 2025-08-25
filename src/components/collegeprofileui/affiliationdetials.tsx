@@ -102,22 +102,45 @@ const uploadFileToS3 = async (file: File, collegeId: string, questionId: string)
 
     console.log('File uploaded successfully. File URL:', fileUrl);
     return fileUrl;
-  } catch (error) {
-    console.error("S3 upload failed:", error);
-    
-    if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
-      throw new Error(`Network error while uploading ${file.name}. Please check your internet connection.`);
-    } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
-      throw new Error(`Upload timeout for ${file.name}. Please try again.`);
-    } else if (typeof error === 'object' && error !== null && 'response' in error) {
-      const err = error as any;
-      throw new Error(`Upload failed for ${file.name}: ${err.response.status} ${err.response.statusText}`);
-    } else if (error instanceof Error) {
-      throw new Error(`Failed to upload ${file.name}: ${error.message}`);
-    } else {
-      throw new Error(`Failed to upload ${file.name}: Unknown error`);
+  } catch (error: unknown) {
+  console.error("S3 upload failed:", error);
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error
+  ) {
+    const err = error as { code?: string };
+    if (err.code === "ERR_NETWORK") {
+      throw new Error(
+        `Network error while uploading ${file.name}. Please check your internet connection.`
+      );
+    }
+    if (err.code === "ECONNABORTED") {
+      throw new Error(
+        `Upload timeout for ${file.name}. Please try again.`
+      );
     }
   }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  ) {
+    const err = error as { response: { status: number; statusText: string } };
+    throw new Error(
+      `Upload failed for ${file.name}: ${err.response.status} ${err.response.statusText}`
+    );
+  }
+
+  if (error instanceof Error) {
+    throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+  }
+
+  throw new Error(`Failed to upload ${file.name}: Unknown error`);
+}
+
 };
 
 // Function to fetch existing form data
