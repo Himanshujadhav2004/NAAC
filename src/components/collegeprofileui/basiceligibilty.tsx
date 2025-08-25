@@ -52,6 +52,15 @@ interface CollegeFormData {
   alternateFacultyEmail: string;
   alternateFacultyAlternateEmail: string;
 }
+interface FetchedAnswer {
+  answer?: CollegeFormData & {
+    establishmentDate?: string;
+    state?: string;
+    district?: string;
+    alternateState?: string;
+    alternateDistrict?: string;
+  };
+}
 
 // Info Tooltip Component
 const InfoTooltip = ({ content }: { content: string }) => (
@@ -122,7 +131,7 @@ export const Basiceligibilty = () => {
     const [selectedAlternateDistrict, setSelectedAlternateDistrict] = useState('')
     const [alternateDistricts, setAlternateDistricts] = useState<string[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [fetchedData, setFetchedData] = useState<any>(null);
+   const [fetchedData, setFetchedData] = useState<FetchedAnswer | null>(null);
     
     // Modal states
     const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -311,7 +320,7 @@ export const Basiceligibilty = () => {
             await new Promise(resolve => setTimeout(resolve, 1000))
             console.log('✅ Basic eligibility saved successfully!')
             
-        } catch (error) {
+        } catch (error:unknown) {
             console.error('❌ Error saving basic eligibility:', error)
             
             let errorMessage = 'An error occurred while saving the form';
