@@ -132,7 +132,7 @@ const [successMsg, setSuccessMsg] = useState("");
           <CardDescription>
             {step === 1
               ? "Enter your credentials to get OTP"
-              : "Enter the OTP sent to your registered device"}
+              : "Enter the 6-digit code from your authenticator app "}
           </CardDescription>
         </CardHeader>
         <CardContent>
