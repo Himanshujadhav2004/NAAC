@@ -55,6 +55,23 @@ interface AffiliationFormData {
   id: string
 }
 
+// Error response interface
+interface AxiosErrorResponse {
+  response?: {
+    status: number
+    statusText: string
+  }
+  code?: string
+  message?: string
+}
+
+// SRA Program from API response
+interface APISRAProgram {
+  id?: string
+  sraType?: string
+  documentUrl?: string | null | undefined
+}
+
 // S3 Upload utility function - Updated to match the first component's pattern
 const uploadFileToS3 = async (file: File, collegeId: string, questionId: string): Promise<string | null> => {
   try {
@@ -384,7 +401,7 @@ export const Affiliationdetials = () => {
           
           // Populate SRA programs
           if (existingData.sraProgramList && existingData.sraProgramList.length > 0) {
-            const sraList = existingData.sraProgramList.map((program: any) => ({
+            const sraList = existingData.sraProgramList.map((program: APISRAProgram) => ({
               id: program.id || Date.now().toString(),
               sraType: program.sraType || '',
               document: null,
@@ -684,15 +701,16 @@ export const Affiliationdetials = () => {
       console.error('Error saving affiliation details:', error)
       let errorMessage = 'An unknown error occurred';
       
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ERR_NETWORK') {
+      const axiosError = error as AxiosErrorResponse;
+      
+      if (axiosError.code === 'ERR_NETWORK') {
         errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'ECONNABORTED') {
+      } else if (axiosError.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout. Please try again.';
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
-        const err = error as any;
-        errorMessage = `Server error: ${err.response.status} ${err.response.statusText}`;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
+      } else if (axiosError.response) {
+        errorMessage = `Server error: ${axiosError.response.status} ${axiosError.response.statusText}`;
+      } else if (axiosError.message) {
+        errorMessage = axiosError.message;
       }
       
       setErrorMessage(errorMessage)

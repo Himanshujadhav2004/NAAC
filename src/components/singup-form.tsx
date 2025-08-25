@@ -290,7 +290,7 @@ export function SignupForm({
                    Scan the QR code above
                   </p>
                   <p className="text-sm text-gray-600">
-                   Click Continue once you've added the account
+                   Click Continue once you added the account
                   </p>
                 </div>
               </div>
