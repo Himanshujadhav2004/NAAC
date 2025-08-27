@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/popover"
 import axios from 'axios'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+ 
   TooltipProvider,
 } from "@/components/ui/tooltip"
 import { locationData } from '@/app/data/data'
+import InfoTooltip from "@/components/customui/InfoTooltip"
+import SuccessModal from '../customui/SuccessModal'
 
 interface CollegeFormData {
   collegeAISHEID: string;
@@ -69,62 +69,7 @@ interface BasiceligibiltyProps {
   onDataUpdate?: () => void;
 }
 
-// Info Tooltip Component
-const InfoTooltip = ({ content }: { content: string }) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button 
-        type="button" 
-        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-        aria-label="More information"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-      >
-        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
-      </button>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="max-w-xs">{content}</p>
-    </TooltipContent>
-  </Tooltip>
-)
 
-// Success Modal Component
-const SuccessModal = ({ 
-  isOpen, 
-  onClose, 
-  message 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  message: string;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Success!</h3>
-          <p className="text-sm text-gray-600 mb-4">{message}</p>
-          <Button 
-            onClick={onClose}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
-          >
-            Continue
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) => {
     const [open, setOpen] = React.useState(false)

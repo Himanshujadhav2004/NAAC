@@ -168,7 +168,7 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
                   <Input
                     id="email"
                     type="text"
-                    placeholder="Enter username"
+                    placeholder="Enter email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

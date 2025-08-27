@@ -1,6 +1,6 @@
 export const Universityandcollegedata={
 
-    "ANDHRA PRADESH": [
+    "Andhra Pradesh": [
       {
         "name": "Acharya N.G. Ranga Agricultural University",
         "location": "Lam, Guntur – 522 034, Andhra Pradesh",
@@ -242,7 +242,7 @@ export const Universityandcollegedata={
         "established": "2006"
       }
     ],
-    "ARUNACHAL PRADESH": [
+    "Arunachal Pradesh": [
       {
         "name": "Apex Professional University",
         "location": "Pasighat, District East Siang, Arunachal Pradesh - 791102",
@@ -310,7 +310,7 @@ export const Universityandcollegedata={
         "established": "20.06.2012"
       }
     ],
-    "ASSAM": [
+    "Assam": [
       {
         "name": "Assam Agricultural University",
         "location": "Jorhat- 785 013, Assam",
@@ -486,7 +486,7 @@ export const Universityandcollegedata={
         "established": "23.08.2013"
       }
     ],
-    "BIHAR": [
+    "Bihar": [
       {
         "name": "Amity University",
         "location": "Rupaspur, Bailey Road, Patna – 801503, Bihar",
@@ -668,7 +668,7 @@ export const Universityandcollegedata={
         "established": "15.06.2018"
       }
     ],
-    "CHHATTISGARH": [
+    "Chhattisgarh": [
       {
         "name": "AAFT University of Media and Arts",
         "location": "Vill- Maath, Tehsil-Tilda, Dist- Raipur, Chhattisgarh",
@@ -862,7 +862,7 @@ export const Universityandcollegedata={
         "established": "09.06.2020"
       }
     ],
-    "GOA": [
+    "Goa": [
       {
         "name": "Goa University",
         "location": "Sub Post Office Goa University, Taleigao Plateau, Goa- 403 206",
@@ -876,7 +876,7 @@ export const Universityandcollegedata={
         "established": "15.09.2022"
       }
     ],
-    "GUJARAT": [
+    "Gujarat": [
       {
         "name": "Adani University",
         "location": "Shantigram Township, Near Vaishnodevi Circle, SG Highway, Ahmedabad, Gujarat - 382241",
@@ -1441,7 +1441,7 @@ export const Universityandcollegedata={
       "established": "01.06.2022"
     }
   ],
-  "HARYANA": [
+  "Haryana": [
     {
       "name": "Al-Falah University",
       "location": "Faridabad, Haryana",
@@ -1755,7 +1755,7 @@ export const Universityandcollegedata={
       "established": "07.02.2018"
     }
   ],
-  "HIMACHAL PRADESH": [
+  "Himachal Pradesh": [
     {
       "name": "Abhilashi University",
       "location": "Chailchowk (Chachiot), Distt. Mandi, Himachal Pradesh",
@@ -1907,7 +1907,7 @@ export const Universityandcollegedata={
       "established": "27.01.2011"
     }
   ],
-  "JAMMU & KASHMIR": [
+  "Jammu & Kashmir": [
     {
       "name": "Baba Ghulam Shah Badshah University",
       "location": "Dhanour, Rajouri-185131, Jammu & Kashmir",
@@ -1975,7 +1975,7 @@ export const Universityandcollegedata={
       "established": "1949"
     }
   ],
-  "JHARKHAND": [
+  "Jharkhand": [
     {
       "name": "AISECT University",
       "location": "Matwari Chowk, Infront of Gandhi Maidan, Hazaribagh, Jharkhand",
@@ -2151,7 +2151,7 @@ export const Universityandcollegedata={
       "established": "04.07.2017"
     }
   ],
-  "KARNATAKA": [
+  "Karnataka": [
     {
       "name": "Adichunchanagiri University",
       "location": "NH-75, Tq- Nagamangala, Dist- Mandya, B.G. Nagara- 571448, Karnataka",
@@ -2597,7 +2597,7 @@ export const Universityandcollegedata={
         "type": "Deemed University",
         "established": "28.05.2008"
     }],
- "KERALA": [
+ "Kerala": [
     {
       "name": "A.P.J. Abdul Kalam Technological University",
       "location": "CET Campus, Thiruvananthapuram – 695016, Kerala",
@@ -2713,7 +2713,7 @@ export const Universityandcollegedata={
       "established": "1937"
     }
   ],
-  "MADHYA PRADESH": [
+  "Madhya Pradesh": [
     {
       "name": "A.K.S. University",
       "location": "Satna, Madhya Pradesh",
@@ -3123,7 +3123,7 @@ export const Universityandcollegedata={
       "established": "24.08.2017"
     }
   ],
-  "MAHARASHTRA": [
+  "Maharashtra": [
     {
       "name": "Marathwada Agricultural University",
       "location": "Parbhani-431 402, Maharashtra",
@@ -3305,7 +3305,7 @@ export const Universityandcollegedata={
       "established": "1990"
     }
   ],
-  "MANIPUR": [
+  "Manipur": [
     {
       "name": "Asian International University",
       "location": "Lamsang, Manipur- 795113",
@@ -3373,7 +3373,7 @@ export const Universityandcollegedata={
       "established": "05.05.2015"
     }
   ],
-  "MEGHALAYA": [
+  "Meghalaya": [
     {
       "name": "CMJ University",
       "location": "Shillong (Meghalaya)",
@@ -3435,7 +3435,7 @@ export const Universityandcollegedata={
       "established": "13.07.2005"
     }
   ],
-  "MIZORAM": [
+  "Mizoram": [
     {
       "name": "Mizoram University",
       "location": "Post Box No. 190, Tanhril, Aizawal-796 012, Mizoram",
@@ -3449,7 +3449,7 @@ export const Universityandcollegedata={
       "established": "21.03.2006"
     }
   ],
-  "NAGALAND": [
+  "Nagaland": [
     {
       "name": "Nagaland University",
       "location": "Lumami, Zunheboto, Nagaland-798627",
@@ -3481,7 +3481,7 @@ export const Universityandcollegedata={
       "established": "04.11.2009"
     }
   ],
-  "ODISHA": [
+  "Odisha": [
     {
       "name": "AIPH University",
       "location": "Pahala, On Bhubaneswar-Cuttack NH-5, Bhubaneswar- 752101, Odisha",
@@ -3687,7 +3687,7 @@ export const Universityandcollegedata={
       "established": "13.05.2013"
     }
   ],
-  "PUNJAB": [
+  "Punjab": [
     {
       "name": "Adesh University",
       "location": "NH-7, Barnala Road, Bathinda, Punjab",
@@ -3898,7 +3898,7 @@ export const Universityandcollegedata={
       "established": "2006"
     }
   ],
-  "RAJASTHAN": [
+  "Rajasthan": [
     {
       "name": "Amity University Rajasthan",
       "location": "NH-11C, KantKalwar, Jaipur – 303 002, Rajasthan",
@@ -4422,7 +4422,7 @@ export const Universityandcollegedata={
       "established": "02.05.2012"
     }
   ],
-  "SIKKIM": [
+  "Sikkim": [
     {
       "name": "Medhavi Skills University",
       "location": "Singtam Campus Topakhani Lower Chisopani, Singtam Bazar, Singtam, Dist- East Sikkim, Sikkim – 737134",
@@ -4490,7 +4490,7 @@ export const Universityandcollegedata={
       "established": "04.10.2004"
     }
   ],
-  "TAMILNADU": [
+  "Tamil Nadu": [
     {
       "name": "Academy of Maritime Education and Training",
       "location": "135, East Coast Road, Kanathur, Chennai-603112, Tamil Nadu",
@@ -4828,7 +4828,7 @@ export const Universityandcollegedata={
       "established": "01.03.2001"
     }
   ],
-  "TELANGANA": [
+  "Telangana": [
     {
       "name": "Anurag University",
       "location": "Venkatapur (V), Ghatkesar (M), Medchal (Dist), Hyderabad, Telangana- 500088",
@@ -5004,7 +5004,7 @@ export const Universityandcollegedata={
       "established": "20.05.2020"
     }
   ],
-  "TRIPURA": [
+  "Tripura": [
     {
       "name": "The ICFAI University",
       "location": "Agartala -Simna Road, PO: Kamalghat, West Tripura, Tripura – 799210",
@@ -5023,7 +5023,7 @@ export const Universityandcollegedata={
       "type": "Central University",
       "established": "1987"
     }
-  ],  "UTTAR PRADESH": [
+  ],  "Uttar Pradesh": [
     {
       "name": "Aligarh Muslim University",
       "location": "Aligarh-202 002",
@@ -5517,7 +5517,7 @@ export const Universityandcollegedata={
       "established": "1987"
     }
   ],
-  "UTTARAKHAND": [
+  "Uttarakhand": [
     {
       "name": "Bhagwant Global University",
       "location": "Village & Post – Uttari Jhandi Chaur, Tehsil – Kotdwar, Dist. – Pauri Garhwal, Uttarakhand – 246149",
@@ -5735,7 +5735,7 @@ export const Universityandcollegedata={
       "established": "2011"
     }
   ],
-  "WEST BENGAL": [
+  "West Bengal": [
     {
       "name": "Adamas University",
       "location": "Barasat, Barrackpore Road, Barberia, PO Jagannathpur, PS Barasat, Kolkata – 700126, West Bengal",
@@ -6043,7 +6043,7 @@ export const Universityandcollegedata={
       "established": "1995"
     }
   ],
-  "DELHI": [
+  "Delhi": [
     {
       "name": "Dr. B.R. Ambedkar University",
       "location": "Lothian Road, Kashmere Gate, Delhi – 110 006",
@@ -6207,7 +6207,7 @@ export const Universityandcollegedata={
       "established": "1922"
     }
   ],
-  "CHANDIGARH": [
+  "Chandigarh": [
     {
       "name": "Panjab University",
       "location": "Sector 14, Chandigarh-160 014",
@@ -6221,7 +6221,7 @@ export const Universityandcollegedata={
       "established": "16.10.2003"
     }
   ],
-  "PUDUCHERRY": [
+  "Puducherry": [
     {
       "name": "Pondicherry University",
       "location": "R. Venkataraman Nagar, Kalapet, Puducherry - 605 014",
@@ -6241,7 +6241,7 @@ export const Universityandcollegedata={
       "established": "04.08.2008"
     }
   ],
-  "UT OF LADAKH": [
+  "Ladakh": [
     {
       "name": "Central Institute of Buddhist Studies",
       "location": "Choglamsar, Leh (Ladakh), Jammu & Kashmir",

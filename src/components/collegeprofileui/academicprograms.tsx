@@ -8,6 +8,10 @@ import {TooltipProvider} from "@/components/ui/tooltip"
 import InfoTooltip from "@/components/customui/InfoTooltip"
 import axios from 'axios'
 import { uploadFileToS3 } from '../../utils/uploadFileToS3'
+import { Universityandcollegedata } from '@/app/data/universityandcollegedata'
+
+import SuccessModal from "@/components/customui/SuccessModal"
+import ErrorModal from "@/components/customui/ErrorModal"
 // TypeScript interfaces for type safety
 interface AcademicProgramsFormData {
   ugPrograms: string
@@ -27,11 +31,19 @@ interface ProgrammeDetail {
   id: string
   program: string
   department: string
+  universityState: string
   universityAffiliation: string
   sraRecognition: string
   affiliationStatus: string
   document: File | null
   documentUrl?: string
+}
+
+interface UniversityData {
+  name: string
+  location: string
+  type: string
+  established: string
 }
 
 // API Response interfaces
@@ -53,6 +65,7 @@ interface ExistingProgrammeDetail {
   id: string
   program: string
   department: string
+  universityState: string
   universityAffiliation: string
   sraRecognition: string
   affiliationStatus: string
@@ -65,9 +78,6 @@ interface AcademicProgramsProps {
    onDataUpdate?: () => void;
 }
 
-// S3 Upload utility function
-
-
 // Helper to validate integer input between 0 and 100
 const validateIntInput = (value: string) => {
   if (value === '') return ''
@@ -77,97 +87,6 @@ const validateIntInput = (value: string) => {
   return String(num)
 }
 
-// Tooltip component with better alignment
-// const InfoTooltip = ({ content }: { content: string }) => (
-//   <Tooltip>
-//     <TooltipTrigger asChild>
-//       <button 
-//         type="button" 
-//         className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-//         aria-label="More information"
-//         onClick={(e) => {
-//           e.preventDefault();
-//           e.stopPropagation();
-//         }}
-//       >
-//         <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
-//       </button>
-//     </TooltipTrigger>
-//     <TooltipContent>
-//       <p className="max-w-xs">{content}</p>
-//     </TooltipContent>
-//   </Tooltip>
-// )
-
-// Success Modal Component
-const SuccessModal = ({ 
-  isOpen, 
-  onClose, 
-  message 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  message: string;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Success!</h3>
-          <p className="text-sm text-gray-600 mb-4">{message}</p>
-          <Button 
-            onClick={onClose}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
-          >
-            Continue
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Error Modal Component
-const ErrorModal = ({ 
-  isOpen, 
-  onClose, 
-  message 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  message: string;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed</h3>
-          <p className="text-sm text-gray-600 mb-4">{message}</p>
-          <Button 
-            onClick={onClose}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2"
-          >
-            OK
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) => {
   // State management for integer inputs
@@ -191,6 +110,12 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
 
   // State management for programme details table
   const [programmeDetails, setProgrammeDetails] = useState<ProgrammeDetail[]>([])
+  
+  // State for university data
+  const [availableUniversitiesByState, setAvailableUniversitiesByState] = useState<{[key: string]: UniversityData[]}>({})
+
+  // Get available states from your data
+  const availableStates = Object.keys(Universityandcollegedata).sort()
 
   // Load data from props when component mounts or data changes
   useEffect(() => {
@@ -225,6 +150,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
               id: programme.id || Date.now().toString(),
               program: programme.program || '',
               department: programme.department || '',
+              universityState: programme.universityState || '',
               universityAffiliation: programme.universityAffiliation || '',
               sraRecognition: programme.sraRecognition || '',
               affiliationStatus: programme.affiliationStatus || '',
@@ -250,12 +176,22 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
     loadDataFromProps();
   }, [data]); // Dependency on data prop
 
+  // Initialize available universities for each state
+  useEffect(() => {
+    const universitiesByState: {[key: string]: UniversityData[]} = {};
+    availableStates.forEach(state => {
+      universitiesByState[state] = Universityandcollegedata[state as keyof typeof Universityandcollegedata] || [];
+    });
+    setAvailableUniversitiesByState(universitiesByState);
+  }, []);
+
   // Add new programme detail row
   const addProgrammeDetail = () => {
     const newProgramme: ProgrammeDetail = {
       id: Date.now().toString(),
       program: '',
       department: '',
+      universityState: '',
       universityAffiliation: '',
       sraRecognition: '',
       affiliationStatus: '',
@@ -279,6 +215,20 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
     setProgrammeDetails(prev => prev.map(item => 
       item.id === id ? { ...item, [field]: value } : item
     ))
+  }
+
+  // Handle state change for programme details
+  const handleProgrammeStateChange = (id: string, state: string) => {
+    setProgrammeDetails(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, universityState: state, universityAffiliation: '' } // Clear university when state changes
+        : item
+    ))
+  }
+
+  // Get available universities for a specific state
+  const getAvailableUniversitiesForState = (state: string): UniversityData[] => {
+    return availableUniversitiesByState[state] || [];
   }
 
   // Validate file
@@ -344,68 +294,71 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
       window.open(url, '_blank', 'noopener,noreferrer')
     }
   }
-//file control component
-const FileControl = ({ 
-  documentUrl, 
-  document, 
-  onRemove, 
-  documentName = "Document" 
-}: { 
-  documentUrl: string, 
-  document: File | null, 
-  onRemove: () => void,
-  documentName?: string
-}) => {
-  // Function to truncate file name if too long
-  const truncateFileName = (fileName: string, maxLength: number = 30) => {
-    if (fileName.length <= maxLength) return fileName;
-    const extension = fileName.split('.').pop();
-    const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
-    const truncatedName = nameWithoutExtension.substring(0, maxLength - extension!.length - 4) + '...';
-    return `${truncatedName}.${extension}`;
-  };
 
-  return (
-    (document || documentUrl) ? (
-      <div className="flex items-center gap-2 mt-1 flex-wrap">
-        <p className="text-xs text-green-600 flex-shrink min-w-0">
-          {document 
-            ? `Selected: ${truncateFileName(document.name)}` 
-            : `${documentName} uploaded`
-          }
-        </p>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {documentUrl && (
+  //file control component
+  const FileControl = ({ 
+    documentUrl, 
+    document, 
+    onRemove, 
+    documentName = "Document" 
+  }: { 
+    documentUrl: string, 
+    document: File | null, 
+    onRemove: () => void,
+    documentName?: string
+  }) => {
+    // Function to truncate file name if too long
+    const truncateFileName = (fileName: string, maxLength: number = 30) => {
+      if (fileName.length <= maxLength) return fileName;
+      const extension = fileName.split('.').pop();
+      const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+      const truncatedName = nameWithoutExtension.substring(0, maxLength - extension!.length - 4) + '...';
+      return `${truncatedName}.${extension}`;
+    };
+
+    return (
+      (document || documentUrl) ? (
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <p className="text-xs text-green-600 flex-shrink min-w-0">
+            {document 
+              ? `Selected: ${truncateFileName(document.name)}` 
+              : `${documentName} uploaded`
+            }
+          </p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {documentUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => viewFile(documentUrl)}
+                className="text-xs px-2 py-1 h-6"
+              >
+                View
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => viewFile(documentUrl)}
-              className="text-xs px-2 py-1 h-6"
+              onClick={onRemove}
+              className="text-xs px-2 py-1 h-6 text-red-600 hover:text-red-700"
             >
-              View
+              Remove
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRemove}
-            className="text-xs px-2 py-1 h-6 text-red-600 hover:text-red-700"
-          >
-            Remove
-          </Button>
+          </div>
         </div>
-      </div>
-    ) : null
-  )
-}
+      ) : null
+    )
+  }
+
   // Prepare data for backend
   const prepareFormData = (): AcademicProgramsFormData => {
     const updatedProgrammeDetails = programmeDetails.map(programme => ({
       id: programme.id,
       program: programme.program,
       department: programme.department,
+      universityState: programme.universityState,
       universityAffiliation: programme.universityAffiliation,
       sraRecognition: programme.sraRecognition,
       affiliationStatus: programme.affiliationStatus,
@@ -714,6 +667,12 @@ const FileControl = ({
               </th>
               <th className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700">
                 <div className="flex items-center">
+                  State
+                  <InfoTooltip content="State where the affiliated university is located" />
+                </div>
+              </th>
+              <th className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700">
+                <div className="flex items-center">
                   University Affiliation
                   <InfoTooltip content="University to which this program is affiliated" />
                 </div>
@@ -746,7 +705,7 @@ const FileControl = ({
                   <Input
                     type="text"
                     placeholder="Enter program name"
-                    className="w-full text-sm"
+                    className="w-full sm:w-30 text-sm"
                     value={programme.program}
                     onChange={(e) => updateProgrammeDetail(programme.id, 'program', e.target.value)}
                   />
@@ -755,19 +714,57 @@ const FileControl = ({
                   <Input
                     type="text"
                     placeholder="Enter department"
-                    className="w-full text-sm"
+                    className="w-full sm:w-30 text-sm"
                     value={programme.department}
                     onChange={(e) => updateProgrammeDetail(programme.id, 'department', e.target.value)}
                   />
                 </td>
                 <td className="border border-gray-300 px-3 py-2">
-                  <Input
-                    type="text"
-                    placeholder="Enter university affiliation"
-                    className="w-full text-sm"
+                  <Select
+                    key={`state-${programme.id}-${programme.universityState || 'empty'}`}
+                    value={programme.universityState}
+                    onValueChange={(value) => handleProgrammeStateChange(programme.id, value)}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="border border-gray-300 px-3 py-2">
+                  <Select
+                    key={`university-${programme.id}-${programme.universityAffiliation || 'empty'}`}
                     value={programme.universityAffiliation}
-                    onChange={(e) => updateProgrammeDetail(programme.id, 'universityAffiliation', e.target.value)}
-                  />
+                    onValueChange={(value) => updateProgrammeDetail(programme.id, 'universityAffiliation', value)}
+                    disabled={!programme.universityState || getAvailableUniversitiesForState(programme.universityState).length === 0}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue 
+                        placeholder={
+                          !programme.universityState 
+                            ? "Select state first" 
+                            : getAvailableUniversitiesForState(programme.universityState).length === 0 
+                              ? "No universities available" 
+                              : "Select university"
+                        } 
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableUniversitiesForState(programme.universityState).map((university) => (
+                        <SelectItem key={university.name} value={university.name}>
+                          <div className="flex flex-col">
+                            <span>{university.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="border border-gray-300 px-3 py-2">
                   <Select
@@ -847,7 +844,7 @@ const FileControl = ({
               </tr>
             ))}
             <tr>
-              <td colSpan={7} className="border border-gray-300 px-3 py-2">
+              <td colSpan={8} className="border border-gray-300 px-3 py-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -888,4 +885,4 @@ const FileControl = ({
                  </div>
     </TooltipProvider>
   )
-} 
+}

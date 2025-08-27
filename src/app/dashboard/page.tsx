@@ -20,6 +20,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { useRouter, useSearchParams } from "next/navigation"
+import ResetPasswordPage from "@/components/resetpassword"
 
 // Create a separate component for the content that uses useSearchParams
 function DashboardContent() {
@@ -43,9 +44,8 @@ function DashboardContent() {
         return (
           <CollegeProfile></CollegeProfile>
         )
-      case 'project-structure':
-        return (
-          <ProjectStructure></ProjectStructure>
+      case 'reset-password':
+        return (<ResetPasswordPage></ResetPasswordPage>
         )
       default:
         return (
@@ -82,7 +82,7 @@ function DashboardContent() {
               <BreadcrumbItem>
                 <BreadcrumbPage>
                   {section === 'college-profile' ? 'College Profile' : 
-                   section === 'project-structure' ? 'Project Structure' : 
+                   section === 'reset-password' ? 'Reset Password' : 
                    'Data Fetching'}
                 </BreadcrumbPage>
               </BreadcrumbItem>

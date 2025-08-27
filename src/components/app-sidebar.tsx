@@ -56,6 +56,16 @@ const data = {
         // }
       ],
     },
+        {
+      title: "Setting",
+      url: "#",
+      items: [
+        {
+          title: "Reset Password",
+         url: "/dashboard?section=reset-password",
+        },
+      ],
+    }
   ],
 }
 
