@@ -59,7 +59,7 @@ interface QualityInformationFormData {
 
 // Props interface for the component
 interface QualityinformationProps {
-  data?: any,
+  data?: { answer: QualityInformationFormData };
    onDataUpdate?: () => void;
 }
 
