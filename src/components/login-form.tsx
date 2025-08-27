@@ -22,10 +22,22 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { jwtDecode as jwt_decode } from 'jwt-decode';
 type VerifyOtpResponse = {
   token: string;
   collegeId: string;
 };
+
+type DecodedToken = {
+  sub?: string;
+  email: string;
+  aisheId: string;  // Changed from 'collegeId' to 'aisheId'
+  role?: string;
+  sessionId?: string;
+  exp: number;
+  iat: number;
+};
+
 
 export function LoginForm({
   className,
@@ -51,10 +63,10 @@ const [successMsg, setSuccessMsg] = useState("");
 
     try {
       const response = await axios.post(
-        "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login/step1",
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/login/step1`,
         {
-          collegeId,
-          userName: email,
+          
+          email: email,
           password,
         }
       );
@@ -80,49 +92,61 @@ const [successMsg, setSuccessMsg] = useState("");
   };
 
   // Step 2: Verify OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
+ // Step 2: Verify OTP
+const handleVerifyOtp = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setErrorMsg("");
 
-    try {
-      const response = await axios.post<VerifyOtpResponse>(
-        "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login/step2",
-        {
-          totpToken: otp,
-          forceNew: true,
+  try {
+    const response = await axios.post<VerifyOtpResponse>(
+      `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/login/step2`,
+      {
+        totpToken: otp,
+        forceNew: true,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${tempToken}`,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${tempToken}`,
-          },
-        }
-      );
+      }
+    );
 
-      const { token } = response.data;
+    const { token } = response.data;
 
-      // Save token and basic user info
-      localStorage.setItem("token", token);
-      localStorage.setItem("userName", email);
-      localStorage.setItem("collegeId", collegeId);
+    console.log("📥 Received token:", response.data);
 
-      console.log("✅ Login successful, token stored.");
-      setSuccessMsg("Login successful!");
-      router.push("/dashboard");
-    } catch (error: unknown) {
-  console.error("❌ OTP verification failed:", error);
+    // ✅ Decode token here
+    const decoded: DecodedToken = jwt_decode(token);
+    console.log("🔍 Decoded token:", decoded);
 
-  if (error instanceof AxiosError) {
-    setErrorMsg(error.response?.data?.message || "Invalid OTP. Please try again.");
-  } else if (error instanceof Error) {
-    setErrorMsg(error.message);
-  } else {
-    setErrorMsg("Invalid OTP. Please try again.");
-  }
-}finally {
-      setLoading(false);
+    // ✅ Fixed: Use 'aisheId' instead of 'collegeId'
+    localStorage.setItem("token", token);
+    localStorage.setItem("userName", decoded.email || email);
+    localStorage.setItem("collegeId", decoded.aisheId || collegeId); // Changed from decoded.collegeId to decoded.aisheId
+    localStorage.setItem("role", decoded.role || "");
+    
+    const getcollegeID = localStorage.getItem("collegeId");
+    console.log("Retrieved collegeId from localStorage:", getcollegeID);
+
+    console.log("✅ Login successful, token & decoded data stored.");
+    setSuccessMsg("Login successful!");
+    router.push("/dashboard");
+  } catch (error: unknown) {
+    console.error("❌ OTP verification failed:", error);
+
+    if (error instanceof AxiosError) {
+      setErrorMsg(error.response?.data?.message || "Invalid OTP. Please try again.");
+    } else if (error instanceof Error) {
+      setErrorMsg(error.message);
+    } else {
+      setErrorMsg("Invalid OTP. Please try again.");
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -150,17 +174,7 @@ const [successMsg, setSuccessMsg] = useState("");
                     required
                   />
                 </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="collegeId">AISHE ID</Label>
-                  <Input
-                    id="collegeId"
-                    type="text"
-                    placeholder="Enter AISHE ID"
-                    value={collegeId}
-                    onChange={(e) => setCollegeId(e.target.value)}
-                    required
-                  />
-                </div>
+              
                 <div className="grid gap-3">
                   <div className="flex items-center">
                     <Label htmlFor="password">Password</Label>

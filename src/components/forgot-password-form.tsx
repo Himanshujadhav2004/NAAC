@@ -37,7 +37,7 @@ export function ForgotPasswordForm({
 
     try {
       const response = await axios.post(
-        "https://rk09x7vo2l.execute-api.ap-south-1.amazonaws.com/dev/resetPassword",
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/resetPassword`,
         {
           userName: userName,
           oldPassword: oldPassword,

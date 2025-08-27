@@ -23,6 +23,34 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { jwtDecode as jwt_decode } from 'jwt-decode';
+
+// ✅ Fixed: Updated type definition to match actual token structure
+type DecodedToken = {
+  sub?: string;
+  email: string;
+  aisheId: string;  // Changed from 'collegeId' to 'aisheId'
+  role?: string;
+  sessionId?: string;
+  exp: number;
+  iat: number;
+};
+
+// Password validation functions
+const validatePassword = (password: string) => {
+  const validations = {
+    length: password.length >= 8 && password.length <= 12,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    digit: /\d/.test(password),
+    symbol: /[@#%\-_]/.test(password)
+  };
+
+  return {
+    isValid: Object.values(validations).every(Boolean),
+    validations
+  };
+};
 
 export function SignupForm({
   className,
@@ -38,14 +66,31 @@ export function SignupForm({
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [successotp, setSuccessotp] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Form, 2: QR Code, 3: OTP
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [tempToken, setTempToken] = useState('');
+  const [passwordValidation, setPasswordValidation] = useState({
+    isValid: false,
+    validations: {
+      length: false,
+      uppercase: false,
+      lowercase: false,
+      digit: false,
+      symbol: false
+    }
+  });
 
   const handleRoleChange = (value: string) => {
     setRole(value);
   }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    setPasswordValidation(validatePassword(newPassword));
+  };
 
   // Step 1: Initial signup
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,19 +99,21 @@ export function SignupForm({
     setSuccess('');
     setLoading(true);
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
+    // Validate password requirements
+    if (!passwordValidation.isValid) {
+      setError("Password does not meet the requirements");
       setLoading(false);
       return;
     }
-
+    console.log(`${process.env.API}`)
     try {
+      const completecollegeID = `C-${collegeId}`;
       const response = await axios.post(
-        'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/register',
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/register`,
         {
-          userName: email,
+          email: email,
           password: password,
-          collegeId: collegeId,
+          aisheId: completecollegeID,
           role: role
         }
       );
@@ -80,15 +127,16 @@ export function SignupForm({
       }
 
     } catch (err: unknown) {
-  console.error("Signup error", err);
+      console.error("Signup error", err);
 
-  if (err instanceof AxiosError) {
-    setError(err.response?.data?.message || "Registration failed. Please try again.");
-  } else if (err instanceof Error) {
-    setError(err.message);
-  } else {
-    setError("Registration failed. Please try again.");
-  }} finally {
+      if (err instanceof AxiosError) {
+        setError(err.response?.data?.message || "Registration failed. Please try again.");
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Registration failed. Please try again.");
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -98,7 +146,7 @@ export function SignupForm({
     setStep(3);
   };
 
-  // Step 3: Verify OTP and complete signup
+  // ✅ Fixed: Step 3: Verify OTP and complete signup
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -107,10 +155,9 @@ export function SignupForm({
     try {
       // First login to get temp token
       const loginResponse = await axios.post(
-        "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login/step1",
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/login/step1`,
         {
-          collegeId,
-          userName: email,
+          email: email,
           password,
         }
       );
@@ -119,7 +166,7 @@ export function SignupForm({
 
       // Then verify OTP
       const otpResponse = await axios.post(
-        "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/login/step2",
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/login/step2`,
         {
           totpToken: otp,
           forceNew: true,
@@ -133,29 +180,36 @@ export function SignupForm({
 
       const { token } = otpResponse.data;
 
-      // Save token and user info
-      localStorage.setItem("token", token);
-      localStorage.setItem("userName", email);
-      localStorage.setItem("collegeId", collegeId);
+      // ✅ Decode token
+      const decoded: DecodedToken = jwt_decode(token);
+      console.log("🔍 Decoded token:", decoded);
 
-     
-      setSuccess("Account verified successfully! Redirecting to dashboard...");
+      // ✅ Fixed: Save token and user info using correct property names
+      localStorage.setItem("token", token);
+      localStorage.setItem("userName", decoded.email || email);
+      localStorage.setItem("collegeId", decoded.aisheId || `C-${collegeId}`); // Use aisheId instead of collegeId
+      localStorage.setItem("role", decoded.role || role);
       
+      const getcollegeID = localStorage.getItem("collegeId");
+      console.log("Retrieved collegeId from localStorage:", getcollegeID);
+
+      setSuccessotp("Account verified successfully! Redirecting to dashboard...");
+
       setTimeout(() => {
         router.push("/dashboard");
       }, 1500);
 
     } catch (error: unknown) {
-  console.error("❌ OTP verification failed:", error);
+      console.error("❌ OTP verification failed:", error);
 
-  if (error instanceof AxiosError) {
-    setError(error.response?.data?.message || "Invalid OTP. Please try again.");
-  } else if (error instanceof Error) {
-    setError(error.message);
-  } else {
-    setError("Invalid OTP. Please try again.");
-  }}
-   finally {
+      if (error instanceof AxiosError) {
+        setError(error.response?.data?.message || "Invalid OTP. Please try again.");
+      } else if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Invalid OTP. Please try again.");
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -196,7 +250,7 @@ export function SignupForm({
                   <Input
                     id="email"
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="example@gmail.com"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -207,32 +261,48 @@ export function SignupForm({
                   <Input
                     id="password"
                     type="password"
-                    placeholder="enter password"
+                    placeholder="Enter password"
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={handlePasswordChange}
                   />
+                  
+                  {password && (
+                    <p className="text-xs text-gray-500">
+                      Password must contain: 8-12 characters, one uppercase letter, one lowercase letter, one digit, one symbol (@, #, %, -, _)
+                    </p>
+                  )}
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
                   <Input
                     id="confirm-password"
                     type="password"
-                    placeholder="confirm password"
+                    placeholder="Confirm password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
+                  
+                  <span className="min-h-[20px] -mb-4"> {confirmPassword && password !== confirmPassword && (
+                    <p className="text-red-600 text-sm">Passwords do not match</p>
+                  )}
+                  </span>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="collegeId">AISHE ID</Label>
                   <Input
                     id="collegeId"
-                    type="text"
-                    placeholder="enter AISHE ID"
+                    type="number"
+                    placeholder="C-12334"
                     required
                     value={collegeId}
                     onChange={(e) => setCollegeId(e.target.value)}
+                    onInput={(e) => {
+                      // Remove non-numeric characters
+                      const target = e.target as HTMLInputElement;
+                      target.value = target.value.replace(/[^0-9]/g, '');
+                    }}
                   />
                 </div>
                 <div className="grid gap-3">
@@ -255,7 +325,11 @@ export function SignupForm({
                 {error && <p className="text-red-600 text-sm">{error}</p>}
                 {success && <p className="text-green-600 text-center text-sm">{success}</p>}
                 <div className="flex flex-col gap-3">
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
+                  >
                     {loading ? "Creating Account..." : "Sign Up"}
                   </Button>
                 </div>
@@ -284,13 +358,13 @@ export function SignupForm({
                 )}
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">
-                    Open your authenticator app Google Authenticator, Authy, etc.
+                    1.Open your authenticator app Google Authenticator, Authy, etc.
                   </p>
                   <p className="text-sm text-gray-600 mb-2">
-                   Scan the QR code above
+                   2.Scan the QR code above
                   </p>
                   <p className="text-sm text-gray-600">
-                   Click Continue once you added the account
+                   3.Click Continue once you added the account
                   </p>
                 </div>
               </div>
@@ -325,7 +399,7 @@ export function SignupForm({
                 </div>
 
                 {error && <p className="text-red-600 text-center text-sm">{error}</p>}
-                {success && <p className="text-green-600 text-center text-sm">{success}</p>}
+                {successotp && <p className="text-green-600 text-center text-sm">{successotp}</p>}
                 
                 <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
                   {loading ? "Verifying..." : "Complete Signup"}

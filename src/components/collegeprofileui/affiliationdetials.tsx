@@ -4,14 +4,16 @@ import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Input } from '../ui/input'
-import { Save, Info } from "lucide-react"
+import { Save} from "lucide-react"
+import InfoTooltip from "@/components/customui/InfoTooltip"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip"
 import axios from 'axios'
+import { uploadFileToS3 } from '../../utils/uploadFileToS3'
+
+
+import { Universityandcollegedata } from '@/app/data/universityandcollegedata'
 
 // TypeScript interfaces for type safety
 interface NatureSelections {
@@ -26,6 +28,13 @@ interface SRAProgram {
   sraType: string
   document: File | null
   documentUrl?: string
+}
+
+interface UniversityData {
+  name: string
+  location: string
+  type: string
+  established: string
 }
 
 interface AffiliationFormData {
@@ -72,154 +81,15 @@ interface APISRAProgram {
   documentUrl?: string | null | undefined
 }
 
-// S3 Upload utility function - Updated to match the first component's pattern
-const uploadFileToS3 = async (file: File, collegeId: string, questionId: string): Promise<string | null> => {
-  try {
-    console.log('Starting file upload for:', file.name);
-    
-    const fileName = file.name;
-    const fileExtension = fileName
-      .substring(fileName.lastIndexOf(".") + 1)
-      .toLowerCase();
-    
-    const response = await axios.post(
-      "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/upload-url",
-      { 
-        collegeId, 
-        questionId, 
-        fileExtension 
-      },
-      {
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-
-    console.log('Upload URL response:', response.data);
-    const { uploadUrl, fileUrl } = response.data;
-
-    if (!uploadUrl || !fileUrl) {
-      throw new Error('Invalid response from upload URL endpoint');
+// Add props interface
+interface AffiliationdetialsProps {
+  data?: {
+    answer?: AffiliationFormData & {
+      sraProgramList?: APISRAProgram[]
     }
-
-    await axios.put(uploadUrl, file, {
-      headers: {
-        "Content-Type": file.type,
-      },
-      timeout: 60000,
-      onUploadProgress: (progressEvent) => {
-        if (typeof progressEvent.total === 'number' && progressEvent.total > 0) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
-        }
-      }
-    });
-
-    console.log('File uploaded successfully. File URL:', fileUrl);
-    return fileUrl;
-  } catch (error: unknown) {
-  console.error("S3 upload failed:", error);
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error
-  ) {
-    const err = error as { code?: string };
-    if (err.code === "ERR_NETWORK") {
-      throw new Error(
-        `Network error while uploading ${file.name}. Please check your internet connection.`
-      );
-    }
-    if (err.code === "ECONNABORTED") {
-      throw new Error(
-        `Upload timeout for ${file.name}. Please try again.`
-      );
-    }
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error
-  ) {
-    const err = error as { response: { status: number; statusText: string } };
-    throw new Error(
-      `Upload failed for ${file.name}: ${err.response.status} ${err.response.statusText}`
-    );
-  }
-
-  if (error instanceof Error) {
-    throw new Error(`Failed to upload ${file.name}: ${error.message}`);
-  }
-
-  throw new Error(`Failed to upload ${file.name}: Unknown error`);
+  } | null
+   onDataUpdate?: () => void;
 }
-
-};
-
-// Function to fetch existing form data
-const fetchExistingData = async (questionId: string): Promise<AffiliationFormData | null> => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      console.log('No token found, starting with empty form');
-      return null;
-    }
-
-    const response = await axios.get(
-      'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers?questionId=iiqa2',
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-
-    console.log("GET response:", response.data);
-    const allAnswers = response.data;
-
-    // Find iiqa2
-    const iiqa2Data = allAnswers.find((item: { questionId: string }) => item.questionId === "iiqa2");
-
-    if (iiqa2Data && iiqa2Data.answer) {
-      console.log("iiqa2 answer:", iiqa2Data.answer);
-      return iiqa2Data.answer;
-    } else {
-      console.log("No data found for iiqa2");
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching existing data:', error);
-    return null;
-  }
-};
-
-// Tooltip component
-const InfoTooltip = ({ content }: { content: string }) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button 
-        type="button" 
-        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-        aria-label="More information"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-      >
-        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
-      </button>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="max-w-xs">{content}</p>
-    </TooltipContent>
-  </Tooltip>
-)
 
 // Success Modal Component
 const SuccessModal = ({ 
@@ -291,7 +161,7 @@ const ErrorModal = ({
   );
 };
 
-export const Affiliationdetials = () => {
+export const Affiliationdetials = ({ data ,onDataUpdate}: AffiliationdetialsProps) => {
   // State management
   const [natureSelections, setNatureSelections] = useState<NatureSelections>({
     private: false,
@@ -301,16 +171,20 @@ export const Affiliationdetials = () => {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [modalMessage, setModalMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [collegeId, setCollegeId] = useState<string>('')
+  const [isUploading, setIsUploading] = useState(false)
   const [collegeAffiliation, setCollegeAffiliation] = useState('')
   const [universityName, setUniversityName] = useState('')
   const [universityState, setUniversityState] = useState('')
+  
+  // New state for available universities based on selected state
+  const [availableUniversities, setAvailableUniversities] = useState<UniversityData[]>([])
   
   // File states
   const [affiliationDocument, setAffiliationDocument] = useState<File | null>(null)
@@ -336,89 +210,118 @@ export const Affiliationdetials = () => {
   const [aiuDocument, setAiuDocument] = useState<File | null>(null)
   const [aiuDocumentUrl, setAiuDocumentUrl] = useState<string>('')
 
-  // India states data
-  const indiaStates = [
-    "Andaman and Nicobar Islands", "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar",
-    "Chandigarh", "Chhattisgarh", "Dadra and Nagar Haveli", "Delhi", "Goa", "Gujarat",
-    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
-    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry",
-    "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-    "Uttarakhand", "West Bengal"
-  ]
+  // Get available states from your data
+  const availableStates = Object.keys(Universityandcollegedata).sort()
 
-  // Load existing data on component mount
-  useEffect(() => {
-    const loadExistingData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Get collegeId from localStorage
-        const storedCollegeId = localStorage.getItem('collegeId');
-        if (storedCollegeId) {
-          setCollegeId(storedCollegeId);
-        }
-        
-        const existingData = await fetchExistingData("iiqa2");
-        
-        if (existingData) {
-          console.log("Loading existing data:", existingData);
-          
-          // Populate nature of college checkboxes
-          const natureObj = {
-            private: false,
-            government: false,
-            selfFinancing: false,
-            grantInAid: false
-          };
-          
-          if (existingData.natureOfCollege && Array.isArray(existingData.natureOfCollege)) {
-            existingData.natureOfCollege.forEach((nature: string) => {
-              if (nature in natureObj) {
-                natureObj[nature as keyof NatureSelections] = true;
-              }
-            });
-          }
-          setNatureSelections(natureObj);
+  // Load collegeId whenever localStorage changes or on mount
+useEffect(() => {
+  const storedCollegeId = localStorage.getItem("collegeId");
+  if (storedCollegeId) {
+    setCollegeId(storedCollegeId);
+    console.log("Retrieved collegeId from localStorage:", storedCollegeId);
+  } else {
+    console.warn("No collegeId found in localStorage");
+  }
 
-          // Populate other fields with proper fallbacks
-          setCollegeAffiliation(existingData.collegeAffiliation || '');
-          setUniversityName(existingData.universityName || '');
-          setUniversityState(existingData.universityState || '');
-          setAffiliationDocumentUrl(existingData.affiliationDocument || '');
-          setUgcRecognition(existingData.ugcRecognition || '');
-          setUgcDocumentUrl(existingData.ugcDocument || '');
-          setUgc12BRecognition(existingData.ugc12BRecognition || '');
-          setUgc12BDocumentUrl(existingData.ugc12BDocument || '');
-          setAutonomousCollege(existingData.autonomousCollege || '');
-          setAutonomousCollegeDocumentUrl(existingData.autonomousCollegeDocument || '');
-          setCpeRecognition(existingData.cpeRecognition || '');
-          setCpeDocumentUrl(existingData.cpeDocument || '');
-          setCollegeOfExcellence(existingData.collegeOfExcellence || '');
-          setCollegeOfExcellenceDocumentUrl(existingData.collegeOfExcellenceDocument || '');
-          setSraPrograms(existingData.sraPrograms || '');
-          setAiuRecognition(existingData.aiuRecognition || '');
-          setAiuDocumentUrl(existingData.aiuDocument || '');
-          
-          // Populate SRA programs
-          if (existingData.sraProgramList && existingData.sraProgramList.length > 0) {
-            const sraList = existingData.sraProgramList.map((program: APISRAProgram) => ({
-              id: program.id || Date.now().toString(),
-              sraType: program.sraType || '',
-              document: null,
-              documentUrl: program.documentUrl || undefined
-            }));
-            setSraProgramList(sraList);
-          }
+  // Sync with other tabs too
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === "collegeId") {
+      setCollegeId(event.newValue || "");
+      console.log("CollegeId updated from another tab:", event.newValue);
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+  return () => window.removeEventListener("storage", handleStorageChange);
+}, []);
+
+// Load parent data only when `data` changes
+useEffect(() => {
+  const loadDataFromParent = () => {
+    try {
+      setIsLoading(true);
+
+      if (data && data.answer) {
+        console.log("Loading data from parent:", data.answer);
+
+        const natureObj = {
+          private: false,
+          government: false,
+          selfFinancing: false,
+          grantInAid: false,
+        };
+
+        if (data.answer.natureOfCollege && Array.isArray(data.answer.natureOfCollege)) {
+          data.answer.natureOfCollege.forEach((nature: string) => {
+            if (nature in natureObj) {
+              natureObj[nature as keyof typeof natureObj] = true;
+            }
+          });
         }
-      } catch (error) {
-        console.error('Error loading existing data:', error);
-      } finally {
-        setIsLoading(false);
+        setNatureSelections(natureObj);
+
+        setCollegeAffiliation(data.answer.collegeAffiliation || "");
+        setUniversityName(data.answer.universityName || "");
+        setUniversityState(data.answer.universityState || "");
+        setAffiliationDocumentUrl(data.answer.affiliationDocument || "");
+        setUgcRecognition(data.answer.ugcRecognition || "");
+        setUgcDocumentUrl(data.answer.ugcDocument || "");
+        setUgc12BRecognition(data.answer.ugc12BRecognition || "");
+        setUgc12BDocumentUrl(data.answer.ugc12BDocument || "");
+        setAutonomousCollege(data.answer.autonomousCollege || "");
+        setAutonomousCollegeDocumentUrl(data.answer.autonomousCollegeDocument || "");
+        setCpeRecognition(data.answer.cpeRecognition || "");
+        setCpeDocumentUrl(data.answer.cpeDocument || "");
+        setCollegeOfExcellence(data.answer.collegeOfExcellence || "");
+        setCollegeOfExcellenceDocumentUrl(data.answer.collegeOfExcellenceDocument || "");
+        setSraPrograms(data.answer.sraPrograms || "");
+        setAiuRecognition(data.answer.aiuRecognition || "");
+        setAiuDocumentUrl(data.answer.aiuDocument || "");
+
+        if (data.answer.sraProgramList && data.answer.sraProgramList.length > 0) {
+          const sraList = data.answer.sraProgramList.map((program: APISRAProgram) => ({
+            id: program.id || Date.now().toString(),
+            sraType: program.sraType || "",
+            document: null,
+            documentUrl: program.documentUrl || undefined,
+          }));
+          setSraProgramList(sraList);
+        }
       }
-    };
+    } catch (error) {
+      console.error("Error loading data from parent:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    loadExistingData();
-  }, []);
+  loadDataFromParent();
+}, [data]);
+
+// Effect to update available universities when state changes
+useEffect(() => {
+  if (
+    universityState &&
+    Universityandcollegedata[universityState as keyof typeof Universityandcollegedata]
+  ) {
+    setAvailableUniversities(
+      Universityandcollegedata[universityState as keyof typeof Universityandcollegedata]
+    );
+  } else {
+    setAvailableUniversities([]);
+  }
+
+  // Clear university name if state changes and current university is not in new state
+  if (universityState && universityName) {
+    const isCurrentUniversityInNewState =
+      Universityandcollegedata[universityState as keyof typeof Universityandcollegedata]?.some(
+        (uni: UniversityData) => uni.name === universityName
+      );
+    if (!isCurrentUniversityInNewState) {
+      setUniversityName('');
+    }
+  }
+}, [universityState]);
 
   // Handle checkbox changes
   const handleNatureChange = (nature: keyof NatureSelections) => {
@@ -432,6 +335,73 @@ export const Affiliationdetials = () => {
   const handleAffiliationChange = (value: string) => {
     setCollegeAffiliation(value)
   }
+
+  // Handle state change
+  const handleStateChange = (value: string) => {
+    setUniversityState(value)
+    // University name will be cleared by useEffect
+  }
+
+  // Handle university name change
+  const handleUniversityChange = (value: string) => {
+    setUniversityName(value)
+  }
+
+  const FileControl = ({ 
+  documentUrl, 
+  document, 
+  onRemove, 
+  documentName = "Document" 
+}: { 
+  documentUrl: string, 
+  document: File | null, 
+  onRemove: () => void,
+  documentName?: string
+}) => {
+  // Function to truncate file name if too long
+  const truncateFileName = (fileName: string, maxLength: number = 30) => {
+    if (fileName.length <= maxLength) return fileName;
+    const extension = fileName.split('.').pop();
+    const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+    const truncatedName = nameWithoutExtension.substring(0, maxLength - extension!.length - 4) + '...';
+    return `${truncatedName}.${extension}`;
+  };
+
+  return (
+    (document || documentUrl) ? (
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <p className="text-xs text-green-600 flex-shrink min-w-0">
+          {document 
+            ? `Selected: ${truncateFileName(document.name)}` 
+            : `${documentName} uploaded`
+          }
+        </p>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {documentUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => viewFile(documentUrl)}
+              className="text-xs px-2 py-1 h-6"
+            >
+              View
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRemove}
+            className="text-xs px-2 py-1 h-6 text-red-600 hover:text-red-700"
+          >
+            Remove
+          </Button>
+        </div>
+      </div>
+    ) : null
+  )
+}
 
   // Generic file validation function
   const validateFile = (file: File): boolean => {
@@ -458,6 +428,7 @@ export const Affiliationdetials = () => {
         return
       }
 
+      setIsUploading(true) // Start upload
       setUploadProgress(`Uploading ${file.name}...`)
       const url = await uploadFileToS3(file, collegeId, 'iiqa2')
       if (url) {
@@ -471,6 +442,8 @@ export const Affiliationdetials = () => {
       setErrorMessage(errorMessage)
       setShowErrorModal(true)
       setUploadProgress('')
+    } finally {
+      setIsUploading(false) // End upload
     }
   }
 
@@ -554,6 +527,7 @@ export const Affiliationdetials = () => {
 
       // Upload the file
       try {
+        setIsUploading(true) // Start upload
         setUploadProgress(`Uploading SRA document: ${file.name}...`)
         const url = await uploadFileToS3(file, collegeId, 'iiqa2')
         if (url) {
@@ -571,6 +545,8 @@ export const Affiliationdetials = () => {
         setErrorMessage(errorMessage)
         setShowErrorModal(true)
         setUploadProgress('')
+      } finally {
+        setIsUploading(false) // End upload
       }
     }
   }
@@ -674,7 +650,7 @@ export const Affiliationdetials = () => {
 
       // Submit to your API
       const response = await axios.post(
-        'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers',
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
         {
           questionId: "iiqa2",
           answer: formData
@@ -692,6 +668,9 @@ export const Affiliationdetials = () => {
         setUploadProgress('Form submitted successfully!')
         setModalMessage('Affiliation details saved successfully!')
         setShowSuccessModal(true)
+        if (onDataUpdate) {
+  onDataUpdate();
+}
       } else {
         setErrorMessage('Unexpected response from server')
         setShowErrorModal(true)
@@ -728,46 +707,17 @@ export const Affiliationdetials = () => {
     }
   }
 
-  // File control component for consistent UI
-  const FileControl = ({ 
-    documentUrl, 
-    document, 
-    onRemove, 
-    documentName = "Document" 
-  }: { 
-    documentUrl: string, 
-    document: File | null, 
-    onRemove: () => void,
-    documentName?: string
-  }) => (
-    (document || documentUrl) ? (
-      <div className="flex items-center gap-2 mt-1">
-        <p className="text-xs text-green-600">
-          {document ? `Selected: ${document.name}` : `${documentName} uploaded`}
-        </p>
-        {documentUrl && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => viewFile(documentUrl)}
-            className="text-xs px-2 py-1 h-6"
-          >
-            View
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onRemove}
-          className="text-xs px-2 py-1 h-6 text-red-600 hover:text-red-700"
-        >
-          Remove
-        </Button>
+  // Show loading state if still loading
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-6xl mx-auto h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Loading...</p>
+        </div>
       </div>
-    ) : null
-  )
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -787,7 +737,7 @@ export const Affiliationdetials = () => {
           message={errorMessage}
         />
 
-        <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
+      <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
           
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -796,23 +746,16 @@ export const Affiliationdetials = () => {
               <InfoTooltip content="Fill in all the affiliation and recognition details of your institution. Upload relevant documents in PDF format." />
             </div>
           </div>
-          
-          {/* Upload Progress Indicator */}
-          {/* {uploadProgress && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-blue-800">{uploadProgress}</p>
-            </div>
-          )} */}
 
           {/* Nature of College Section */}
-     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Nature of the college
               </Label>
               <InfoTooltip content="Select all applicable categories that describe the nature and ownership of your institution." />
             </div>
-            <div className="flex flex-row gap-8 w-96">
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-96">
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="private" 
@@ -851,16 +794,17 @@ export const Affiliationdetials = () => {
           {/* College Affiliation Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 College Affiliation
               </Label>
               <InfoTooltip content="Specify whether your college is affiliated to or constituted by a university." />
             </div>
             <Select 
+              key={`affiliation-${collegeAffiliation || 'empty'}`}
               value={collegeAffiliation}
               onValueChange={handleAffiliationChange}
             >
-              <SelectTrigger className="w-80 text-sm">
+              <SelectTrigger className="w-full sm:w-80 text-sm">
                 <SelectValue placeholder="Select affiliation type" />
               </SelectTrigger>
               <SelectContent>
@@ -870,42 +814,64 @@ export const Affiliationdetials = () => {
             </Select>
           </div>
 
-          {/* University Name Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
-                University Name
-              </Label>
-              <InfoTooltip content="Enter the full name of the university to which your college is affiliated or by which it is constituted." />
-            </div>
-            <Input 
-              type="text"
-              placeholder="Enter university name"
-              className="w-80 text-sm"
-              value={universityName}
-              onChange={(e) => setUniversityName(e.target.value)}
-            />
-          </div>
-
           {/* University State Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 State
               </Label>
               <InfoTooltip content="Select the state where the parent university is located." />
             </div>
             <Select 
+              key={`state-${universityState || 'empty'}`}
               value={universityState}
-              onValueChange={setUniversityState}
+              onValueChange={handleStateChange}
             >
-              <SelectTrigger className="w-80 text-sm">
+              <SelectTrigger className="w-full sm:w-80 text-sm">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
-                {indiaStates.map((state) => (
+                {availableStates.map((state) => (
                   <SelectItem key={state} value={state}>
                     {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* University Name Section */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <div className="flex items-center">
+              <Label className="text-sm font-medium w-full sm:w-40">
+                University Name
+              </Label>
+              <InfoTooltip content="Select the university to which your college is affiliated or by which it is constituted." />
+            </div>
+            <Select 
+              key={`university-${universityName || 'empty'}`}
+              value={universityName}
+              onValueChange={handleUniversityChange}
+              disabled={!universityState || availableUniversities.length === 0}
+            >
+              <SelectTrigger className="w-full sm:w-80 text-sm">
+                <SelectValue 
+                  placeholder={
+                    !universityState 
+                      ? "Please select a state first" 
+                      : availableUniversities.length === 0 
+                        ? "No universities available" 
+                        : "Select university"
+                  } 
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUniversities.map((university) => (
+                  <SelectItem key={university.name} value={university.name}>
+                    <div className="flex flex-col">
+                      <span>{university.name} </span>
+                   
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -915,17 +881,17 @@ export const Affiliationdetials = () => {
           {/* Affiliation Document Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Affiliation Document
               </Label>
               <InfoTooltip content="Upload the official affiliation/constitution document from the university. PDF format only, maximum 5MB." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <Input 
                 type="file"
                 accept=".pdf"
                 onChange={handleFileChange}
-                className="text-sm"
+                className="text-sm truncate"
               />
               <p className="text-xs text-gray-500 mt-1">
                 File type: PDF only (Max. size: 5MB)
@@ -942,12 +908,12 @@ export const Affiliationdetials = () => {
           {/* UGC Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the Institution recognized under section 2(f) of the UGC Act?
               </Label>
               <InfoTooltip content="Section 2(f) recognition means the institution is recognized by UGC as a university for higher education purposes." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -982,7 +948,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleUgcFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1001,12 +967,12 @@ export const Affiliationdetials = () => {
           {/* UGC 12B Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the Institution recognized under section 12B of the UGC Act?
               </Label>
               <InfoTooltip content="Section 12B recognition allows the institution to receive central government grants and funding from UGC." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1041,7 +1007,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleUgc12BFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1063,12 +1029,12 @@ export const Affiliationdetials = () => {
           {/* Autonomous College Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the institution recognised as an Autonomous College by the UGC?
               </Label>
               <InfoTooltip content="Autonomous colleges have the freedom to design their own courses, conduct examinations, and declare results within the university framework." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1103,7 +1069,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleAutonomousCollegeFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1122,12 +1088,12 @@ export const Affiliationdetials = () => {
           {/* CPE Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the institution recognised as a College with Potential for Excellence CPE by the UGC?
               </Label>
               <InfoTooltip content="CPE is a UGC scheme to support colleges with potential for excellence by providing additional grants and autonomy." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1162,7 +1128,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleCpeFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1181,12 +1147,12 @@ export const Affiliationdetials = () => {
           {/* College of Excellence Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the institution recognised as a College of Excellence by the UGC?
               </Label>
               <InfoTooltip content="College of Excellence is a prestigious recognition given by UGC to institutions demonstrating exceptional academic performance." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1221,7 +1187,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleCollegeOfExcellenceFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1240,12 +1206,12 @@ export const Affiliationdetials = () => {
           {/* SRA Programs Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 Is the College offering any programmes recognised by any Statutory Regulatory Authority (SRA)?
               </Label>
               <InfoTooltip content="Statutory Regulatory Authorities include UGC, AICTE, NCTE, PCI etc. that regulate and approve specific professional programs." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1282,7 +1248,7 @@ export const Affiliationdetials = () => {
               {sraPrograms === 'Yes' && (
                 <div className="mt-4 space-y-4">
                   {sraProgramList.map((program, index) => (
-                    <div key={program.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div key={program.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 overflow-hidden">
                       <div className="flex justify-between items-center mb-3">
                         <h4 className="text-sm font-medium">SRA Program {index + 1}</h4>
                         {sraProgramList.length > 1 && (
@@ -1301,14 +1267,15 @@ export const Affiliationdetials = () => {
                       <div className="space-y-3">
                         {/* SRA Type Selection */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                          <Label className="text-sm font-medium w-32">
+                          <Label className="text-sm font-medium w-full sm:w-32">
                             SRA Type
                           </Label>
                           <Select 
+                            key={`sra-${program.id}-${program.sraType || 'empty'}`}
                             value={program.sraType}
                             onValueChange={(value) => updateSRAProgramType(program.id, value)}
                           >
-                            <SelectTrigger className="w-64 text-sm">
+                            <SelectTrigger className="w-full sm:w-64 text-sm">
                               <SelectValue placeholder="Select SRA type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1322,16 +1289,16 @@ export const Affiliationdetials = () => {
 
                         {/* Document Upload */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                          <Label className="text-sm font-medium w-32">
+                          <Label className="text-sm font-medium w-full sm:w-32">
                             Document
                           </Label>
-                          <div className="w-64">
-                            <Input 
-                              type="file"
-                              accept=".pdf"
-                              onChange={(e) => handleSRAFileChange(program.id, e)}
-                              className="text-sm"
-                            />
+                        <div className="w-full sm:w-64 min-w-0">
+  <Input 
+    type="file"
+    accept=".pdf"
+    onChange={(e) => handleSRAFileChange(program.id, e)}
+    className="text-sm truncate"
+  />
                             <p className="text-xs text-gray-500 mt-1">
                               File type: PDF only (Max. size: 5MB)
                             </p>
@@ -1366,12 +1333,12 @@ export const Affiliationdetials = () => {
           {/* AIU Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-40">
+              <Label className="text-sm font-medium w-full sm:w-40">
                 If the institution is not affiliated to a university and is offering programmes recognized by any Statutory Regulatory Authorities (SRA), are the programmes recognized by Association of Indian Universities(AIU) or other appropriate Government authorities as equivalent to UG / PG Programmes of a University?
               </Label>
               <InfoTooltip content="For non-affiliated institutions, AIU recognition ensures that programs are equivalent to university degree programs for employment and further education." />
             </div>
-            <div className="w-80">
+            <div className="w-full sm:w-80">
               <div className="space-y-3">
                 {/* Text Input */}
                 <div>
@@ -1390,7 +1357,7 @@ export const Affiliationdetials = () => {
                     type="file"
                     accept=".pdf"
                     onChange={handleAiuFileChange}
-                    className="text-sm"
+                    className="text-sm truncate"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     File type: PDF only (Max. size: 5MB)
@@ -1408,32 +1375,27 @@ export const Affiliationdetials = () => {
         </form>
 
         {/* Mobile Save Button */}
-        <div className="flex justify-center">
-          <div className="lg:hidden mb-4 px-4">
-            <Button 
-              type="button"
-              onClick={handleSubmit}
-              className="w-[100px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
-              disabled={isSubmitting}
-            >
-              <Save className="h-5 w-5" />
-              <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-            </Button>
-          </div>
-        </div>
-        
-        {/* Desktop Floating Save Button */}
-        <div className="hidden lg:block">
-          <Button 
-            onClick={handleSubmit} 
-            className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
-            disabled={isSubmitting}
-          >
-            <Save className="h-5 w-5" />
-            <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-          </Button>
-        </div>
-      </div>
+    <div className=" lg:hidden fixed bottom-6 right-6 z-40">
+                        <Button 
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        >
+                            <Save className="h-5 w-5" />
+                            <span className="hidden sm:inline">
+                                {isSubmitting ? 'Saving...' : 'Save'}
+                            </span>
+                        </Button>
+                    </div>
+
+                {/* Desktop Save Button */}
+                <div className="hidden lg:block">
+                    <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
+                        <Save className="h-5 w-5" />
+                        <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
+                    </Button>
+                </div>
+            </div>
     </TooltipProvider>
   )
 }

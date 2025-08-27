@@ -4,7 +4,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Calendar } from "@/components/ui/calendar"
-import { ChevronDownIcon, Info, Save } from "lucide-react"
+import { ChevronDownIcon, Save } from "lucide-react"
 import {
     Popover,
     PopoverContent,
@@ -12,12 +12,11 @@ import {
 } from "@/components/ui/popover"
 import axios from 'axios'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+ 
   TooltipProvider,
 } from "@/components/ui/tooltip"
-
+import { uploadFileToS3 } from '../../utils/uploadFileToS3'
+import InfoTooltip from "@/components/customui/InfoTooltip"
 // TypeScript interfaces for type safety
 interface StaffCounts {
   male: string
@@ -56,6 +55,12 @@ interface QualityInformationFormData {
   certificationDocument: File | null
   certificationDocumentUrl?: string
   id: string
+}
+
+// Props interface for the component
+interface QualityinformationProps {
+  data?: any,
+   onDataUpdate?: () => void;
 }
 
 // Date formatting utilities
@@ -102,131 +107,9 @@ const dateToApiFormat = (date: Date | undefined): string => {
   return normalizedDate.toISOString().split('T')[0]
 }
 
-// S3 Upload utility function - Updated to match first code
-const uploadFileToS3 = async (file: File, collegeId: string, questionId: string): Promise<string | null> => {
-  try {
-    console.log('Starting file upload for:', file.name);
-    
-    const fileName = file.name;
-    const fileExtension = fileName
-      .substring(fileName.lastIndexOf(".") + 1)
-      .toLowerCase();
-    
-    const response = await axios.post(
-      "https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/upload-url",
-      { 
-        collegeId, 
-        questionId, 
-        fileExtension 
-      },
-      {
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    );
 
-    console.log('Upload URL response:', response.data);
-    const { uploadUrl, fileUrl } = response.data;
 
-    if (!uploadUrl || !fileUrl) {
-      throw new Error('Invalid response from upload URL endpoint');
-    }
 
-    await axios.put(uploadUrl, file, {
-      headers: {
-        "Content-Type": file.type,
-      },
-      timeout: 60000,
-      onUploadProgress: (progressEvent) => {
-        if (typeof progressEvent.total === 'number' && progressEvent.total > 0) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          console.log(`Upload progress: ${percentCompleted}%`);
-        }
-      }
-    });
-
-    console.log('File uploaded successfully. File URL:', fileUrl);
-    return fileUrl;
-  } catch (error) {
-    console.error("S3 upload failed:", error);
-    
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error
-  ) {
-    const err = error as { code?: string };
-    if (err.code === "ERR_NETWORK") {
-      throw new Error(
-        `Network error while uploading ${file.name}. Please check your internet connection.`
-      );
-    }
-    if (err.code === "ECONNABORTED") {
-      throw new Error(
-        `Upload timeout for ${file.name}. Please try again.`
-      );
-    }
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error
-  ) {
-    const err = error as { response: { status: number; statusText: string } };
-    throw new Error(
-      `Upload failed for ${file.name}: ${err.response.status} ${err.response.statusText}`
-    );
-  }
-
-  if (error instanceof Error) {
-    throw new Error(`Failed to upload ${file.name}: ${error.message}`);
-  }
-
-  throw new Error(`Failed to upload ${file.name}: Unknown error`);
-  }
-};
-
-// Function to fetch existing form data
-const fetchExistingData = async (questionId: string): Promise<QualityInformationFormData | null> => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      console.log('No token found, starting with empty form');
-      return null;
-    }
-
-    const response = await axios.get(
-      'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers?questionId=iiqa4',
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-
-    console.log("GET response:", response.data);
-    const allAnswers = response.data;
-
-    const iiqa4Data = allAnswers.find((item: { questionId: string }) => item.questionId === "iiqa4");
-
-    if (iiqa4Data && iiqa4Data.answer) {
-      console.log("iiqa4 answer:", iiqa4Data.answer);
-      return iiqa4Data.answer;
-    } else {
-      console.log("No data found for iiqa4");
-      return null;
-    }
-  } catch (error) {
-    console.error('Error fetching existing data:', error);
-    return null;
-  }
-};
 
 // Helper to validate integer input
 const validateIntInput = (value: string) => {
@@ -245,26 +128,6 @@ const calculateTotal = (male: string, female: string, transgender: string) => {
 }
 
 // Tooltip component with better alignment
-const InfoTooltip = ({ content }: { content: string }) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button 
-        type="button" 
-        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
-        aria-label="More information"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-      >
-        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
-      </button>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="max-w-xs">{content}</p>
-    </TooltipContent>
-  </Tooltip>
-)
 
 // Success Modal Component
 const SuccessModal = ({ 
@@ -336,10 +199,10 @@ const ErrorModal = ({
   );
 };
 
-export const Qualityinformation = () => {
+export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,onDataUpdate}) => {
   // State management
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false) // Track file upload state
   const [uploadProgress, setUploadProgress] = useState<string>('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
@@ -384,71 +247,59 @@ export const Qualityinformation = () => {
   const [certificationDocument, setCertificationDocument] = useState<File | null>(null)
   const [certificationDocumentUrl, setCertificationDocumentUrl] = useState<string>('')
 
-  // Load existing data on component mount
+  // Load data from props when data changes
   useEffect(() => {
-    const loadExistingData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Get collegeId from localStorage
-        const storedCollegeId = localStorage.getItem('collegeId');
-        if (storedCollegeId) {
-          setCollegeId(storedCollegeId);
-        }
-        
-        const existingData = await fetchExistingData("iiqa4");
-        
-        if (existingData) {
-          console.log("Loading existing data:", existingData);
-          
-          // Populate teaching staff data
-          setTeachingStaffMale(existingData.teachingStaff?.male || '');
-          setTeachingStaffFemale(existingData.teachingStaff?.female || '');
-          setTeachingStaffTransgender(existingData.teachingStaff?.transgender || '');
-          
-          // Populate non-teaching staff data
-          setNonTeachingStaffMale(existingData.nonTeachingStaff?.male || '');
-          setNonTeachingStaffFemale(existingData.nonTeachingStaff?.female || '');
-          setNonTeachingStaffTransgender(existingData.nonTeachingStaff?.transgender || '');
-          
-          // Populate student data
-          setStudentsMale(existingData.studentsOnRoll?.male || '');
-          setStudentsFemale(existingData.studentsOnRoll?.female || '');
-          setStudentsTransgender(existingData.studentsOnRoll?.transgender || '');
-          
-          // Populate statutory committees
-          if (existingData.statutoryCommittees) {
-            setScStCommittee(existingData.statutoryCommittees.scStCommittee || false);
-            setMinorityCell(existingData.statutoryCommittees.minorityCell || false);
-            setGrievanceRedressalCommittee(existingData.statutoryCommittees.grievanceRedressalCommittee || false);
-            setInternalComplaintsCommittee(existingData.statutoryCommittees.internalComplaintsCommittee || false);
-            setObcCell(existingData.statutoryCommittees.obcCell || false);
-          }
-          
-          // Populate dates with proper parsing
-          if (existingData.iqacEstablishmentDate) {
-            setIqacDate(parseDate(existingData.iqacEstablishmentDate));
-          }
-          if (existingData.aisheUploadDate) {
-            setAisheDate(parseDate(existingData.aisheUploadDate));
-          }
-          
-          // Populate other fields
-          setRtiDeclaration(existingData.rtiDeclaration || '');
-          setRtiDeclarationUrl(existingData.rtiDeclarationUrl || '');
-          setAcademicMou(existingData.academicMou || '');
-          setAcademicMouDocumentUrl(existingData.academicMouDocumentUrl || '');
-          setCertificationDocumentUrl(existingData.certificationDocumentUrl || '');
-        }
-      } catch (error) {
-        console.error('Error loading existing data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Get collegeId from localStorage
+    const storedCollegeId = localStorage.getItem('collegeId');
+    if (storedCollegeId) {
+      setCollegeId(storedCollegeId);
+    }
 
-    loadExistingData();
-  }, []);
+    // Load data from props if available
+    if (data && data.answer) {
+      const existingData = data.answer;
+      console.log("Loading existing data from props:", existingData);
+      
+      // Populate teaching staff data
+      setTeachingStaffMale(existingData.teachingStaff?.male || '');
+      setTeachingStaffFemale(existingData.teachingStaff?.female || '');
+      setTeachingStaffTransgender(existingData.teachingStaff?.transgender || '');
+      
+      // Populate non-teaching staff data
+      setNonTeachingStaffMale(existingData.nonTeachingStaff?.male || '');
+      setNonTeachingStaffFemale(existingData.nonTeachingStaff?.female || '');
+      setNonTeachingStaffTransgender(existingData.nonTeachingStaff?.transgender || '');
+      
+      // Populate student data
+      setStudentsMale(existingData.studentsOnRoll?.male || '');
+      setStudentsFemale(existingData.studentsOnRoll?.female || '');
+      setStudentsTransgender(existingData.studentsOnRoll?.transgender || '');
+      
+      // Populate statutory committees
+      if (existingData.statutoryCommittees) {
+        setScStCommittee(existingData.statutoryCommittees.scStCommittee || false);
+        setMinorityCell(existingData.statutoryCommittees.minorityCell || false);
+        setGrievanceRedressalCommittee(existingData.statutoryCommittees.grievanceRedressalCommittee || false);
+        setInternalComplaintsCommittee(existingData.statutoryCommittees.internalComplaintsCommittee || false);
+        setObcCell(existingData.statutoryCommittees.obcCell || false);
+      }
+      
+      // Populate dates with proper parsing
+      if (existingData.iqacEstablishmentDate) {
+        setIqacDate(parseDate(existingData.iqacEstablishmentDate));
+      }
+      if (existingData.aisheUploadDate) {
+        setAisheDate(parseDate(existingData.aisheUploadDate));
+      }
+      
+      // Populate other fields
+      setRtiDeclaration(existingData.rtiDeclaration || '');
+      setRtiDeclarationUrl(existingData.rtiDeclarationUrl || '');
+      setAcademicMou(existingData.academicMou || '');
+      setAcademicMouDocumentUrl(existingData.academicMouDocumentUrl || '');
+      setCertificationDocumentUrl(existingData.certificationDocumentUrl || '');
+    }
+  }, [data]); // Dependency on data prop
 
   // Validate file - Updated to 10MB
   const validateFile = (file: File): boolean => {
@@ -479,6 +330,7 @@ export const Qualityinformation = () => {
       setAcademicMouDocument(file)
 
       try {
+        setIsUploading(true) // Start upload
         setUploadProgress(`Uploading Academic MoU document: ${file.name}...`)
         const url = await uploadFileToS3(file, collegeId, 'iiqa4')
         if (url) {
@@ -492,6 +344,8 @@ export const Qualityinformation = () => {
         setErrorMessage(errorMessage)
         setShowErrorModal(true)
         setUploadProgress('')
+      } finally {
+        setIsUploading(false) // End upload
       }
     }
   }
@@ -510,6 +364,7 @@ export const Qualityinformation = () => {
       setCertificationDocument(file)
 
       try {
+        setIsUploading(true) // Start upload
         setUploadProgress(`Uploading certification document: ${file.name}...`)
         const url = await uploadFileToS3(file, collegeId, 'iiqa4')
         if (url) {
@@ -523,6 +378,8 @@ export const Qualityinformation = () => {
         setErrorMessage(errorMessage)
         setShowErrorModal(true)
         setUploadProgress('')
+      } finally {
+        setIsUploading(false) // End upload
       }
     }
   }
@@ -547,45 +404,62 @@ export const Qualityinformation = () => {
   }
 
   // File control component for consistent UI
-  const FileControl = ({ 
-    documentUrl, 
-    document, 
-    onRemove, 
-    documentName = "Document" 
-  }: { 
-    documentUrl?: string, 
-    document: File | null, 
-    onRemove: () => void,
-    documentName?: string
-  }) => (
+// File control component for consistent UI with truncated file names
+const FileControl = ({ 
+  documentUrl, 
+  document, 
+  onRemove, 
+  documentName = "Document" 
+}: { 
+  documentUrl: string, 
+  document: File | null, 
+  onRemove: () => void,
+  documentName?: string
+}) => {
+  // Function to truncate file name if too long
+  const truncateFileName = (fileName: string, maxLength: number = 30) => {
+    if (fileName.length <= maxLength) return fileName;
+    const extension = fileName.split('.').pop();
+    const nameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+    const truncatedName = nameWithoutExtension.substring(0, maxLength - extension!.length - 4) + '...';
+    return `${truncatedName}.${extension}`;
+  };
+
+  return (
     (document || documentUrl) ? (
-      <div className="flex items-center gap-1 mt-1">
-        <p className="text-xs text-green-600 flex-1">
-          {document ? `Selected: ${document.name}` : `${documentName} uploaded`}
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <p className="text-xs text-green-600 flex-shrink min-w-0">
+          {document 
+            ? `Selected: ${truncateFileName(document.name)}` 
+            : `${documentName} uploaded`
+          }
         </p>
-        {documentUrl && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {documentUrl && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => viewFile(documentUrl)}
+              className="text-xs px-2 py-1 h-6"
+            >
+              View
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => viewFile(documentUrl)}
-            className="text-xs px-1 py-0 h-5"
+            onClick={onRemove}
+            className="text-xs px-2 py-1 h-6 text-red-600 hover:text-red-700"
           >
-            View
+            Remove
           </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onRemove}
-          className="text-xs px-1 py-0 h-5 text-red-600 hover:text-red-700"
-        >
-          Remove
-        </Button>
+        </div>
       </div>
     ) : null
   )
+}
 
   // Date handlers
   const handleIqacDateChange = (selectedDate: Date | undefined) => {
@@ -675,7 +549,7 @@ export const Qualityinformation = () => {
 
       // Submit to your API
       const response = await axios.post(
-        'https://2m9lwu9f0d.execute-api.ap-south-1.amazonaws.com/dev/answers',
+        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
         {
           questionId: "iiqa4",
           answer: formData
@@ -693,6 +567,9 @@ export const Qualityinformation = () => {
         setUploadProgress('Form submitted successfully!')
         setModalMessage('Quality information saved successfully!')
         setShowSuccessModal(true)
+        if (onDataUpdate) {
+  onDataUpdate();
+}
       } else {
         setErrorMessage('Unexpected response from server')
         setShowErrorModal(true)
@@ -1166,7 +1043,7 @@ finally {
                       type="file"
                       accept=".pdf"
                       onChange={handleAcademicMouFileChange}
-                      className="w-full text-sm"
+                      className="w-full text-sm truncate"
                     />
                     <p className="text-xs text-gray-500">
                       PDF only (10MB Max.)
@@ -1246,32 +1123,27 @@ finally {
         </form>
         
         {/* Mobile Save Button */}
-        <div className="flex justify-center">
-          <div className="lg:hidden mb-4 px-4">
-            <Button 
-              type="button"
-              onClick={handleSubmit}
-              className="w-[100px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
-              disabled={isSubmitting}
-            >
-              <Save className="h-5 w-5" />
-              <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-            </Button>
-          </div>
-        </div>
-        
-        {/* Desktop Floating Save Button */}
-        <div className="hidden lg:block">
-          <Button 
-            onClick={handleSubmit} 
-            className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
-            disabled={isSubmitting}
-          >
-            <Save className="h-5 w-5" />
-            <span className="ml-2">{isSubmitting ? 'Saving...' : 'Save'}</span>
-          </Button>
-        </div>
-      </div>
+    <div className=" lg:hidden fixed bottom-6 right-6 z-40">
+                        <Button 
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                        >
+                            <Save className="h-5 w-5" />
+                            <span className="hidden sm:inline">
+                                {isSubmitting ? 'Saving...' : 'Save'}
+                            </span>
+                        </Button>
+                    </div>
+
+                {/* Desktop Save Button */}
+                <div className="hidden lg:block">
+                    <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
+                        <Save className="h-5 w-5" />
+                        <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
+                    </Button>
+                </div>
+            </div>
     </TooltipProvider>
   )
 }
