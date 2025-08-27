@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { ChevronDownIcon, Save } from "lucide-react"
+import { ChevronDownIcon, Info, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
@@ -11,8 +11,12 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import axios from 'axios'
-import {TooltipProvider} from "@/components/ui/tooltip"
-import InfoTooltip from "@/components/customui/InfoTooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip"
 import { locationData } from '@/app/data/data'
 
 interface CollegeFormData {
@@ -66,7 +70,26 @@ interface BasiceligibiltyProps {
 }
 
 // Info Tooltip Component
-
+const InfoTooltip = ({ content }: { content: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button 
+        type="button" 
+        className="inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded"
+        aria-label="More information"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 ml-2" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent>
+      <p className="max-w-xs">{content}</p>
+    </TooltipContent>
+  </Tooltip>
+)
 
 // Success Modal Component
 const SuccessModal = ({ 
@@ -553,11 +576,11 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                     message={modalMessage}
                 />
 
-<form onSubmit={handleSubmit} className="w-full overflow-y-auto p-2 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-20 sm:pb-6">
+<form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
 
-    <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center justify-between sm:justify-start">
-            <label htmlFor="College_AISHE_ID" className="text-sm sm:text-base font-medium w-full sm:w-40 text-gray-700">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center">
+            <label htmlFor="College_AISHE_ID" className="text-sm font-medium w-full sm:w-40">
                 College AISHE ID
             </label>
             <InfoTooltip content="Enter the unique AISHE (All India Survey on Higher Education) ID assigned to your college by the Ministry of Education." />
@@ -565,7 +588,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
         <Input 
             required 
             id="College_AISHE_ID" 
-            className='w-full sm:w-80 text-sm sm:text-base h-10 sm:h-11'
+            className='w-full sm:w-80 text-sm'
             disabled
             value={formData.collegeAISHEID}
             onChange={(e) => handleInputChange('collegeAISHEID', e.target.value)}
@@ -573,9 +596,9 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
     </div>
 
     {/* Cycle of Accreditation */}
-    <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center justify-between sm:justify-start">
-            <label htmlFor="Cycle_of_Accreditation" className="text-sm sm:text-base font-medium w-full sm:w-40 text-gray-700">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center">
+            <label htmlFor="Cycle_of_Accreditation" className="text-sm font-medium w-full sm:w-40">
                 Cycle of Accreditation
             </label>
             <InfoTooltip content="Select the current cycle of accreditation your institution is applying for or has completed with NAAC." />
@@ -586,33 +609,31 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             value={formData.cycleOfAccreditation}
             onValueChange={(value) => handleInputChange('cycleOfAccreditation', value)}
         >
-            <SelectTrigger className="w-full sm:w-80 text-sm sm:text-base h-10 sm:h-11">
-                <SelectValue placeholder="Select cycle" />
+            <SelectTrigger className="w-full sm:w-80 text-sm">
+                <SelectValue placeholder="select" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="Cycle1">Cycle 1</SelectItem>
-                <SelectItem value="Cycle2">Cycle 2</SelectItem>
-                <SelectItem value="Cycle3">Cycle 3</SelectItem>
-                <SelectItem value="Cycle4">Cycle 4</SelectItem>
-                <SelectItem value="Cycle5">Cycle 5</SelectItem>
+                <SelectItem value="Cycle1">Cycle1</SelectItem>
+                <SelectItem value="Cycle2">Cycle2</SelectItem>
+                <SelectItem value="Cycle3">Cycle3</SelectItem>
+                <SelectItem value="Cycle4">Cycle4</SelectItem>
+                <SelectItem value="Cycle5">Cycle5</SelectItem>
             </SelectContent>
         </Select>
     </div>
 
     {/* College Name */}
-    <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-start justify-between sm:justify-start">
-            <label htmlFor="aishe" className="text-sm sm:text-base font-medium w-full sm:w-40 text-gray-700 leading-tight">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center">
+            <label htmlFor="aishe" className="text-sm font-medium w-full sm:w-40">
                 Name of the College as per AISHE Certificate
             </label>
-            <div className="flex-shrink-0 mt-1 sm:mt-0">
-                <InfoTooltip content="Enter the exact name of the college as mentioned in your AISHE certificate. This should match official documents." />
-            </div>
+            <InfoTooltip content="Enter the exact name of the college as mentioned in your AISHE certificate. This should match official documents." />
         </div>
         <Input 
             id="aishe" 
             placeholder="Enter College Name" 
-            className='w-full sm:w-80 text-sm sm:text-base h-10 sm:h-11' 
+            className='w-full sm:w-80 text-sm' 
             required 
             maxLength={1000}
             value={formData.collegeName}
@@ -621,24 +642,22 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
     </div>
 
     {/* Establishment Date */}
-    <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-start justify-between sm:justify-start">
-            <Label htmlFor="date" className="text-sm sm:text-base font-medium w-full sm:w-40 text-gray-700 leading-tight">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center">
+            <Label htmlFor="date" className="text-sm font-medium w-full sm:w-40">
                 Date of establishment of the Institution
             </Label>
-            <div className="flex-shrink-0 mt-1 sm:mt-0">
-                <InfoTooltip content="Select the official date when the institution was established or founded. This date should match your registration documents." />
-            </div>
+            <InfoTooltip content="Select the official date when the institution was established or founded. This date should match your registration documents." />
         </div>
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
                     id="date"
-                    className="w-full sm:w-80 justify-between font-light text-sm sm:text-base h-10 sm:h-11"
+                    className="w-full sm:w-80 justify-between font-light text-sm"
                 >
                     {date ? formatDate(date) : "Select date"}
-                    <ChevronDownIcon className="h-4 w-4" />
+                    <ChevronDownIcon />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto overflow-hidden p-0" align="start">
