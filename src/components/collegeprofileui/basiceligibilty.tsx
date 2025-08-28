@@ -68,8 +68,30 @@ interface BasiceligibiltyProps {
   data?: FetchedAnswer | null;
   onDataUpdate?: () => void;
 }
+const capitalizeFirstLetter = (value: string) => {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
 
+const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Allow empty for optional fields
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+};
 
+const validateURL = (url: string): boolean => {
+    if (!url) return true; // Allow empty for optional fields
+    try {
+        const urlObj = new URL(url);
+        return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+        return false;
+    }
+};
+const validateTextOnly = (value: string): string => {
+    // Allow only letters, spaces, periods, commas, apostrophes, hyphens, and parentheses
+    return value.replace(/[^a-zA-Z\s\.\,\'\-\(\)]/g, '');
+};
 
 export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) => {
     const [open, setOpen] = React.useState(false)
@@ -77,13 +99,25 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
     const [selectedState, setSelectedState] = useState('')
     const [selectedDistrict, setSelectedDistrict] = useState('')
     const [districts, setDistricts] = useState<string[]>([])
-    
+    const [emailErrors, setEmailErrors] = useState({
+    email: '',
+    alternateEmail: '',
+    alternateFacultyEmail: '',
+    alternateFacultyAlternateEmail: ''
+});
+const [urlError, setUrlError] = useState('');
     // Alternate Faculty Contact States
     const [selectedAlternateState, setSelectedAlternateState] = useState('')
     const [selectedAlternateDistrict, setSelectedAlternateDistrict] = useState('')
     const [alternateDistricts, setAlternateDistricts] = useState<string[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
-    
+    const [mandatoryFieldErrors, setMandatoryFieldErrors] = useState({
+    cycleOfAccreditation: '',
+    collegeName: '',
+    establishmentDate: '',
+    headOfInstitution: ''
+});
+
     // Modal states
     const [showSuccessModal, setShowSuccessModal] = useState(false)
     const [modalMessage, setModalMessage] = useState('')
@@ -187,10 +221,36 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
         setFormData(prev => ({ ...prev, alternateDistrict: value }))
     }
 
-    const handleInputChange = (field: string, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+   const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear previous errors when user starts typing
+    if (field === 'email' || field === 'alternateEmail' || field === 'alternateFacultyEmail' || field === 'alternateFacultyAlternateEmail') {
+        setEmailErrors(prev => ({ ...prev, [field]: '' }));
     }
+    if (field === 'website') {
+        setUrlError('');
+    }
+};
 
+const handleEmailChange = (field: keyof typeof emailErrors, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Validate email on blur or when value changes
+    if (value && !validateEmail(value)) {
+        setEmailErrors(prev => ({ ...prev, [field]: 'Please enter a valid email address' }));
+    } else {
+        setEmailErrors(prev => ({ ...prev, [field]: '' }));
+    }
+};const handleURLChange = (value: string) => {
+    setFormData(prev => ({ ...prev, website: value }));
+    
+    if (value && !validateURL(value)) {
+        setUrlError('Please enter a valid URL (must start with http:// or https://)');
+    } else {
+        setUrlError('');
+    }
+};
     const handleNumberInputChange = (field: string, value: string, maxLength: number) => {
         // Only allow digits and limit length
         const numericValue = value.replace(/[^0-9]/g, '')
@@ -232,103 +292,182 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
         return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        
-        try {
-            setIsSubmitting(true)
-            
-            // Update form data with current state values
-            const completeData = {
-                ...formData,
-                id:"CPT1",
-                state: selectedState,
-                district: selectedDistrict,
-                alternateState: selectedAlternateState,
-                alternateDistrict: selectedAlternateDistrict,
-                ageOfInstitution: getAgeInYearsAndMonths(date)
-            }
-            
-            console.log('=== BASIC ELIGIBILITY FORM DATA ===')
-            console.log('Complete Form Data:', completeData)
-       
-            const token = localStorage.getItem("token");
 
-            const response = await axios.post(
-                `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
-                {
-                    questionId: "iiqa1",
-                    answer: {
-                        collegeAISHEID: completeData.collegeAISHEID,
-                        cycleOfAccreditation: completeData.cycleOfAccreditation,
-                        collegeName: completeData.collegeName,
-                        establishmentDate: completeData.establishmentDate,
-                        ageOfInstitution: getAgeInYearsAndMonths(date),
-                        headOfInstitution: completeData.headOfInstitution,
-                        designation: completeData.designation,
-                        ownCampus: completeData.ownCampus,
-                        address: completeData.address,
-                        state: completeData.state,
-                        district: completeData.district,
-                        city: completeData.city,
-                        pin: completeData.pin,
-                        phoneNo: completeData.phoneNo,
-                        faxNo: completeData.faxNo,
-                        mobileNo: completeData.mobileNo,
-                        email: completeData.email,
-                        alternateEmail: completeData.alternateEmail,
-                        website: completeData.website,
-                        alternateFacultyName: completeData.alternateFacultyName,
-                        alternateAddress: completeData.alternateAddress,
-                        alternateState: completeData.alternateState,
-                        alternateDistrict: completeData.alternateDistrict,
-                        alternateCity: completeData.alternateCity,
-                        alternatePin: completeData.alternatePin,
-                        alternatePhoneNo: completeData.alternatePhoneNo,
-                        alternateFaxNo: completeData.alternateFaxNo,
-                        alternateMobileNo: completeData.alternateMobileNo,
-                        alternateFacultyEmail: completeData.alternateFacultyEmail,
-                        alternateFacultyAlternateEmail: completeData.alternateFacultyAlternateEmail,
-                    },
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+    const validateMandatoryFields = () => {
+    const errors = {
+        cycleOfAccreditation: '',
+        collegeName: '',
+        establishmentDate: '',
+        headOfInstitution: ''
+    };
+    let hasErrors = false;
 
-            console.log(response.data.message || "User data has been saved successfully!");
-        
-            // Show success modal
-            setModalMessage('Basic eligibility information saved successfully!')
-            setShowSuccessModal(true)
-            if(onDataUpdate){onDataUpdate()}
-            
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            console.log('✅ Basic eligibility saved successfully!')
-            
-        } catch (error: unknown) {
-            console.error("❌ Error saving basic eligibility:", error);
-
-            let errorMessage = "An error occurred while saving the form";
-
-            if (
-                typeof error === "object" &&
-                error !== null &&
-                "response" in error &&
-                typeof (error as { response?: unknown }).response === "object"
-            ) {
-                const resp = (error as { response?: { status?: number; statusText?: string } }).response;
-                errorMessage = `Server error: ${resp?.status ?? "Unknown"} ${resp?.statusText ?? ""}`;
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-        } finally {
-            setIsSubmitting(false)
-        }
+    if (!formData.cycleOfAccreditation.trim()) {
+        errors.cycleOfAccreditation = 'Cycle of Accreditation is required';
+        hasErrors = true;
     }
+
+    if (!formData.collegeName.trim()) {
+        errors.collegeName = 'College name is required';
+        hasErrors = true;
+    }
+
+    if (!formData.establishmentDate || !date) {
+        errors.establishmentDate = 'Date of establishment is required';
+        hasErrors = true;
+    }
+
+    if (!formData.headOfInstitution.trim()) {
+        errors.headOfInstitution = 'Name of the Head of Institution is required';
+        hasErrors = true;
+    }
+
+    setMandatoryFieldErrors(errors);
+    return !hasErrors;
+};
+const handleTextOnlyInputChange = (field: string, value: string) => {
+    // Allow only letters, spaces, periods, commas, apostrophes, hyphens, and parentheses
+    const textOnlyValue = value.replace(/[^a-zA-Z\s\.\,\'\-\(\)]/g, '');
+    const capitalizedValue = capitalizeFirstLetter(textOnlyValue);
+    setFormData(prev => ({ ...prev, [field]: capitalizedValue }));
+};
+
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate mandatory fields first
+    const isMandatoryFieldsValid = validateMandatoryFields();
+    
+    // Validate all emails before submission
+    const emailFields: (keyof typeof emailErrors)[] = ['email', 'alternateEmail', 'alternateFacultyEmail', 'alternateFacultyAlternateEmail'];
+    let hasEmailErrors = false;
+    const newEmailErrors = { ...emailErrors };
+    
+    emailFields.forEach(field => {
+        const emailValue = formData[field];
+        if (emailValue && !validateEmail(emailValue)) {
+            newEmailErrors[field] = 'Please enter a valid email address';
+            hasEmailErrors = true;
+        }
+    });
+    
+    // Validate URL
+    let hasUrlError = false;
+    if (formData.website && !validateURL(formData.website)) {
+        setUrlError('Please enter a valid URL (must start with http:// or https://)');
+        hasUrlError = true;
+    }
+    
+    setEmailErrors(newEmailErrors);
+    
+    // If there are validation errors, don't submit and scroll to first error
+    if (!isMandatoryFieldsValid || hasEmailErrors || hasUrlError) {
+        // Scroll to the first error field
+        const firstErrorElement = document.querySelector('.border-red-500');
+        if (firstErrorElement) {
+            firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+    
+    // Continue with form submission
+    try {
+        setIsSubmitting(true);
+        
+        // Update form data with current state values
+        const completeData = {
+            ...formData,
+            id: "CPT1",
+            state: selectedState,
+            district: selectedDistrict,
+            alternateState: selectedAlternateState,
+            alternateDistrict: selectedAlternateDistrict,
+            ageOfInstitution: getAgeInYearsAndMonths(date)
+        };
+        
+        console.log('=== BASIC ELIGIBILITY FORM DATA ===');
+        console.log('Complete Form Data:', completeData);
+   
+        const token = localStorage.getItem("token");
+
+        const response = await axios.post(
+            `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
+            {
+                questionId: "iiqa1",
+                answer: {
+                    collegeAISHEID: completeData.collegeAISHEID,
+                    cycleOfAccreditation: completeData.cycleOfAccreditation,
+                    collegeName: completeData.collegeName,
+                    establishmentDate: completeData.establishmentDate,
+                    ageOfInstitution: getAgeInYearsAndMonths(date),
+                    headOfInstitution: completeData.headOfInstitution,
+                    designation: completeData.designation,
+                    ownCampus: completeData.ownCampus,
+                    address: completeData.address,
+                    state: completeData.state,
+                    district: completeData.district,
+                    city: completeData.city,
+                    pin: completeData.pin,
+                    phoneNo: completeData.phoneNo,
+                    faxNo: completeData.faxNo,
+                    mobileNo: completeData.mobileNo,
+                    email: completeData.email,
+                    alternateEmail: completeData.alternateEmail,
+                    website: completeData.website,
+                    alternateFacultyName: completeData.alternateFacultyName,
+                    alternateAddress: completeData.alternateAddress,
+                    alternateState: completeData.alternateState,
+                    alternateDistrict: completeData.alternateDistrict,
+                    alternateCity: completeData.alternateCity,
+                    alternatePin: completeData.alternatePin,
+                    alternatePhoneNo: completeData.alternatePhoneNo,
+                    alternateFaxNo: completeData.alternateFaxNo,
+                    alternateMobileNo: completeData.alternateMobileNo,
+                    alternateFacultyEmail: completeData.alternateFacultyEmail,
+                    alternateFacultyAlternateEmail: completeData.alternateFacultyAlternateEmail,
+                },
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        console.log(response.data.message || "User data has been saved successfully!");
+    
+        // Show success modal
+        setModalMessage('Basic eligibility information saved successfully!');
+        setShowSuccessModal(true);
+        if(onDataUpdate){onDataUpdate();}
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('✅ Basic eligibility saved successfully!');
+        
+    } catch (error: unknown) {
+        console.error("❌ Error saving basic eligibility:", error);
+
+        let errorMessage = "An error occurred while saving the form";
+
+        if (
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof (error as { response?: unknown }).response === "object"
+        ) {
+            const resp = (error as { response?: { status?: number; statusText?: string } }).response;
+            errorMessage = `Server error: ${resp?.status ?? "Unknown"} ${resp?.statusText ?? ""}`;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        
+        // Show error message to user
+        alert(`Error: ${errorMessage}`);
+    } finally {
+        setIsSubmitting(false);
+    }
+};
     
     function formatDate(date: Date | undefined) {
         if (!date) return ""
@@ -548,6 +687,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             </label>
             <InfoTooltip content="Select the current cycle of accreditation your institution is applying for or has completed with NAAC." />
         </div>
+           <div className="w-full sm:w-80">
         <Select 
             key={`cycle-${formData.cycleOfAccreditation || 'empty'}`}
             required 
@@ -565,27 +705,35 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 <SelectItem value="Cycle5">Cycle5</SelectItem>
             </SelectContent>
         </Select>
+         {mandatoryFieldErrors.cycleOfAccreditation && (
+        <p className="text-red-500 text-xs mt-1">{mandatoryFieldErrors.cycleOfAccreditation}</p>
+    )}
+    </div>
     </div>
 
     {/* College Name */}
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center">
-            <label htmlFor="aishe" className="text-sm font-medium w-full sm:w-40">
-                Name of the College as per AISHE Certificate
-            </label>
-            <InfoTooltip content="Enter the exact name of the college as mentioned in your AISHE certificate. This should match official documents." />
-        </div>
-        <Input 
-            id="aishe" 
-            placeholder="Enter College Name" 
-            className='w-full sm:w-80 text-sm' 
-            required 
-            maxLength={1000}
-            value={formData.collegeName}
-            onChange={(e) => handleInputChange('collegeName', e.target.value)}
-        />
+  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+    <div className="flex items-center">
+        <label htmlFor="aishe" className="text-sm font-medium w-full sm:w-40">
+            Name of the College as per AISHE Certificate *
+        </label>
+        <InfoTooltip content="Enter the exact name of the college as mentioned in your AISHE certificate. This should match official documents." />
     </div>
-
+    <div className="w-full sm:w-80">  {/* Add this container div */}
+        <Input 
+    id="aishe" 
+    placeholder="Enter College Name" 
+    className={`w-full text-sm ${mandatoryFieldErrors.collegeName ? 'border-red-500' : ''}`}
+    required 
+    maxLength={1000}
+    value={formData.collegeName}
+    onChange={(e) => handleTextOnlyInputChange('collegeName', e.target.value)}
+/>
+        {mandatoryFieldErrors.collegeName && (
+            <p className="text-red-500 text-xs mt-1">{mandatoryFieldErrors.collegeName}</p>
+        )}
+    </div>  {/* Close container div */}
+</div>
     {/* Establishment Date */}
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
@@ -594,12 +742,13 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             </Label>
             <InfoTooltip content="Select the official date when the institution was established or founded. This date should match your registration documents." />
         </div>
+         <div className="w-full sm:w-80"> 
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
                     id="date"
-                    className="w-full sm:w-80 justify-between font-light text-sm"
+                    className="w-full sm:w-80 justify-between font-normal text-sm"
                 >
                     {date ? formatDate(date) : "Select date"}
                     <ChevronDownIcon />
@@ -618,6 +767,10 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 />
             </PopoverContent>
         </Popover>
+         {mandatoryFieldErrors.establishmentDate && (
+        <p className="text-red-500 text-xs mt-1">{mandatoryFieldErrors.establishmentDate}</p>
+    )}
+    </div>
     </div>
 
     {/* Head of Institution */}
@@ -628,15 +781,20 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             </label>
             <InfoTooltip content="Enter the full name of the current head of the institution (Principal, Director, etc.)" />
         </div>
-        <Input 
-            required 
-            id="Name_of_the_Head_of_the_Institution" 
-            placeholder="Enter Name" 
-            className='w-full sm:w-80 text-sm' 
-            maxLength={255}
-            value={formData.headOfInstitution}
-            onChange={(e) => handleInputChange('headOfInstitution', e.target.value)}
-        />
+         <div className="w-full sm:w-80"> 
+       <Input 
+    required 
+    id="Name_of_the_Head_of_the_Institution" 
+    placeholder="Enter Name" 
+    className='w-full sm:w-80 text-sm' 
+    maxLength={255}
+    value={formData.headOfInstitution}
+    onChange={(e) => handleTextOnlyInputChange('headOfInstitution', e.target.value)}
+/>
+            {mandatoryFieldErrors.headOfInstitution && (
+        <p className="text-red-500 text-xs mt-1">{mandatoryFieldErrors.headOfInstitution}</p>
+    )}
+    </div>
     </div>
 
     {/* Designation */}
@@ -702,7 +860,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             placeholder="Enter Address" 
             className='w-full sm:w-80 text-sm'
             value={formData.address}
-            onChange={(e) => handleInputChange('address', e.target.value)}
+            onChange={(e) => handleInputChange('address', capitalizeFirstLetter(e.target.value))}
         />
     </div>
 
@@ -770,14 +928,14 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             </label>
             <InfoTooltip content="Enter the name of the city where the college is located." />
         </div>
-        <Input 
-            required 
-            id="City" 
-            placeholder="Enter City" 
-            className='w-full sm:w-80 text-sm'
-            value={formData.city}
-            onChange={(e) => handleInputChange('city', e.target.value)}
-        />
+     <Input 
+    required 
+    id="City" 
+    placeholder="Enter City" 
+    className='w-full sm:w-80 text-sm'
+    value={formData.city}
+    onChange={(e) => handleTextOnlyInputChange('city', e.target.value)}
+/>
     </div>
 
     {/* Pin */}
@@ -814,7 +972,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             placeholder="Enter Phone No" 
             className='w-full sm:w-80 text-sm' 
             value={formData.phoneNo}
-            onChange={(e) => handleNumberInputChange('phoneNo', e.target.value, 10)}
+            onChange={(e) => handleNumberInputChange('phoneNo', e.target.value,10)}
         />
     </div>
       
@@ -833,7 +991,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
             placeholder="Enter Fax No" 
             className='w-full sm:w-80 text-sm' 
             value={formData.faxNo}
-            onChange={(e) => handleInputChange('faxNo', e.target.value)}
+            onChange={(e) => handleNumberInputChange('faxNo', e.target.value,10)}
         />
     </div>
 
@@ -857,62 +1015,78 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
     </div>
 
     {/* Email */}
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center">
-            <label htmlFor="Email" className="text-sm font-medium w-full sm:w-40">
-                Email 
-            </label>
-            <InfoTooltip content="Enter the primary official email address of the college." />
-        </div>
+   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+    <div className="flex items-center">
+        <label htmlFor="Email" className="text-sm font-medium w-full sm:w-40">
+            Email 
+        </label>
+        <InfoTooltip content="Enter the primary official email address of the college." />
+    </div>
+    <div className="w-full sm:w-80">
         <Input 
             type='email' 
             required 
             id="Email" 
             placeholder="Enter Email" 
-            className='w-full sm:w-80 text-sm'
+            className={`w-full text-sm ${emailErrors.email ? 'border-red-500' : ''}`}
             value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
+            onChange={(e) => handleEmailChange('email', e.target.value)}
+            onBlur={(e) => handleEmailChange('email', e.target.value)}
         />
+        {emailErrors.email && (
+            <p className="text-red-500 text-xs mt-1">{emailErrors.email}</p>
+        )}
     </div>
+</div>
 
     {/* Alternate Email */}
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center">
-            <label htmlFor="Alternate_Email" className="text-sm font-medium w-full sm:w-40">
-                Alternate Email 
-            </label>
-            <InfoTooltip content="Enter an alternate email address for the college for backup communication." />
-        </div>
+  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+    <div className="flex items-center">
+        <label htmlFor="Alternate_Email" className="text-sm font-medium w-full sm:w-40">
+            Alternate Email 
+        </label>
+        <InfoTooltip content="Enter an alternate email address for the college for backup communication." />
+    </div>
+    <div className="w-full sm:w-80">
         <Input 
             type='email' 
             required 
             id="Alternate_Email" 
             placeholder="Enter Email" 
-            className='w-full sm:w-80 text-sm'
+            className={`w-full text-sm ${emailErrors.alternateEmail ? 'border-red-500' : ''}`}
             value={formData.alternateEmail}
-            onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
+            onChange={(e) => handleEmailChange('alternateEmail', e.target.value)}
+            onBlur={(e) => handleEmailChange('alternateEmail', e.target.value)}
         />
+        {emailErrors.alternateEmail && (
+            <p className="text-red-500 text-xs mt-1">{emailErrors.alternateEmail}</p>
+        )}
     </div>
-
+</div>
     {/* Website */}
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-        <div className="flex items-center">
-            <label htmlFor="Website" className="text-sm font-medium w-full sm:w-40">
-                Website 
-            </label>
-            <InfoTooltip content="Enter the official website URL of the college. Include http:// or https://" />
-        </div>
+    <div className="flex items-center">
+        <label htmlFor="Website" className="text-sm font-medium w-full sm:w-40">
+            Website 
+        </label>
+        <InfoTooltip content="Enter the official website URL of the college. Include http:// or https://" />
+    </div>
+    <div className="w-full sm:w-80">
         <Input 
             type='url' 
             required 
             id="Website" 
             placeholder="Website url" 
-            className='w-full sm:w-80 text-sm'
+            className={`w-full text-sm ${urlError ? 'border-red-500' : ''}`}
             value={formData.website}
-            onChange={(e) => handleInputChange('website', e.target.value)}
+            onChange={(e) => handleURLChange(e.target.value)}
+            onBlur={(e) => handleURLChange(e.target.value)}
         />
+        {urlError && (
+            <p className="text-red-500 text-xs mt-1">{urlError}</p>
+        )}
     </div>
-
+</div>
     {/* Institution Age */}
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
@@ -948,7 +1122,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 className='w-full sm:w-80 text-sm'
                 maxLength={255}
                 value={formData.alternateFacultyName}
-                onChange={(e) => handleInputChange('alternateFacultyName', e.target.value)}
+                onChange={(e) => handleTextOnlyInputChange('alternateFacultyName',e.target.value)}
             />
         </div>
 
@@ -967,7 +1141,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 className='w-full sm:w-80 text-sm'
                 maxLength={255}
                 value={formData.alternateAddress}
-                onChange={(e) => handleInputChange('alternateAddress', e.target.value)}
+                onChange={(e) => handleInputChange('alternateAddress', capitalizeFirstLetter(e.target.value))}
             />
         </div>
 
@@ -1035,13 +1209,13 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 </label>
                 <InfoTooltip content="Enter the city for the alternate faculty contact." />
             </div>
-            <Input 
-                id="Alternate_City" 
-                placeholder="Enter City" 
-                className='w-full sm:w-80 text-sm'
-                value={formData.alternateCity}
-                onChange={(e) => handleInputChange('alternateCity', e.target.value)}
-            />
+           <Input 
+    id="Alternate_City" 
+    placeholder="Enter City" 
+    className='w-full sm:w-80 text-sm'
+    value={formData.alternateCity}
+    onChange={(e) => handleTextOnlyInputChange('alternateCity', e.target.value)}
+/>
         </div>
 
         {/* Alternate Pin */}
@@ -1076,7 +1250,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 placeholder="Enter Phone No" 
                 className='w-full sm:w-80 text-sm' 
                 value={formData.alternatePhoneNo}
-                onChange={(e) => handleNumberInputChange('alternatePhoneNo', e.target.value,10)}
+                onChange={(e) => handleNumberInputChange('alternatePhoneNo', e.target.value,255)}
             />
         </div>
           
@@ -1094,7 +1268,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
                 placeholder="Enter Fax No" 
                 className='w-full sm:w-80 text-sm' 
                 value={formData.alternateFaxNo}
-                onChange={(e) => handleInputChange('alternateFaxNo', e.target.value)}
+                onChange={(e) => handleNumberInputChange('alternateFaxNo', e.target.value,255)}
             />
         </div>
 
@@ -1117,62 +1291,61 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
         </div>
 
         {/* Alternate Faculty Email */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <div className="flex items-center">
-                <label htmlFor="Alternate_Faculty_Email" className="text-sm font-medium w-full sm:w-40">
-                    Email 
-                </label>
-                <InfoTooltip content="Enter the email address of the alternate faculty contact." />
-            </div>
-            <Input 
-                type='email' 
-                id="Alternate_Faculty_Email" 
-                placeholder="Enter Email" 
-                className='w-full sm:w-80 text-sm'
-                value={formData.alternateFacultyEmail}
-                onChange={(e) => handleInputChange('alternateFacultyEmail', e.target.value)}
-            />
-        </div>
+       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+    <div className="flex items-center">
+        <label htmlFor="Alternate_Faculty_Email" className="text-sm font-medium w-full sm:w-40">
+            Email 
+        </label>
+        <InfoTooltip content="Enter the email address of the alternate faculty contact." />
+    </div>
+    <div className="w-full sm:w-80">
+        <Input 
+            type='email' 
+            id="Alternate_Faculty_Email" 
+            placeholder="Enter Email" 
+            className={`w-full text-sm ${emailErrors.alternateFacultyEmail ? 'border-red-500' : ''}`}
+            value={formData.alternateFacultyEmail}
+            onChange={(e) => handleEmailChange('alternateFacultyEmail', e.target.value)}
+            onBlur={(e) => handleEmailChange('alternateFacultyEmail', e.target.value)}
+        />
+        {emailErrors.alternateFacultyEmail && (
+            <p className="text-red-500 text-xs mt-1">{emailErrors.alternateFacultyEmail}</p>
+        )}
+    </div>
+</div>
 
         {/* Alternate Faculty Alternate Email */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-            <div className="flex items-center">
-                <label htmlFor="Alternate_Faculty_Alternate_Email" className="text-sm font-medium w-full sm:w-40">
-                    Alternate Email 
-                </label>
-                <InfoTooltip content="Enter an alternate email address for the alternate faculty contact." />
-            </div>
-            <Input 
-                type='email' 
-                id="Alternate_Faculty_Alternate_Email" 
-                placeholder="Enter Email" 
-                className='w-full sm:w-80 text-sm'
-                value={formData.alternateFacultyAlternateEmail}
-                onChange={(e) => handleInputChange('alternateFacultyAlternateEmail', e.target.value)}
-            />
-        </div>
+       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+    <div className="flex items-center">
+        <label htmlFor="Alternate_Faculty_Alternate_Email" className="text-sm font-medium w-full sm:w-40">
+            Alternate Email 
+        </label>
+        <InfoTooltip content="Enter an alternate email address for the alternate faculty contact." />
+    </div>
+    <div className="w-full sm:w-80">
+        <Input 
+            type='email' 
+            id="Alternate_Faculty_Alternate_Email" 
+            placeholder="Enter Email" 
+            className={`w-full text-sm ${emailErrors.alternateFacultyAlternateEmail ? 'border-red-500' : ''}`}
+            value={formData.alternateFacultyAlternateEmail}
+            onChange={(e) => handleEmailChange('alternateFacultyAlternateEmail', e.target.value)}
+            onBlur={(e) => handleEmailChange('alternateFacultyAlternateEmail', e.target.value)}
+        />
+        {emailErrors.alternateFacultyAlternateEmail && (
+            <p className="text-red-500 text-xs mt-1">{emailErrors.alternateFacultyAlternateEmail}</p>
+        )}
+    </div>
+</div>
     </div>
 </form>
 
-                {/* Mobile Save Button */}
-                {/* <div className="flex justify-center">
-                    <div className="lg:hidden mb-4 px-4">
-                        <Button 
-                            type="button"
-                            onClick={handleSubmit}
-                            className="w-[100px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
-                            disabled={isSubmitting}
-                        >
-                            <Save className="h-5 w-5" />
-                            <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-                        </Button>
-                    </div>
-                </div> */}
+            
                  <div className=" lg:hidden fixed bottom-6 right-6 z-40">
                         <Button 
                             onClick={handleSubmit}
                             disabled={isSubmitting}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                            className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
                         >
                             <Save className="h-5 w-5" />
                             <span className="hidden sm:inline">
@@ -1183,7 +1356,7 @@ export const Basiceligibilty = ({ data, onDataUpdate }: BasiceligibiltyProps) =>
 
                 {/* Desktop Save Button */}
                 <div className="hidden lg:block">
-                    <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
+                    <Button onClick={handleSubmit} className="fixed bottom-7 cursor-pointer right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
                         <Save className="h-5 w-5" />
                         <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
                     </Button>

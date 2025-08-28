@@ -1057,27 +1057,32 @@ finally {
         </form>
         
         {/* Mobile Save Button */}
-    <div className=" lg:hidden fixed bottom-6 right-6 z-40">
-                        <Button 
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
-                        >
-                            <Save className="h-5 w-5" />
-                            <span className="hidden sm:inline">
-                                {isSubmitting ? 'Saving...' : 'Save'}
-                            </span>
-                        </Button>
-                    </div>
+  <div className="lg:hidden fixed bottom-6 right-6 z-40">
+    <Button 
+        onClick={handleSubmit}
+        disabled={isSubmitting || isUploading}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+        <Save className="h-5 w-5" />
+        <span className="hidden sm:inline">
+            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+        </span>
+    </Button>
+</div>
 
-                {/* Desktop Save Button */}
-                <div className="hidden lg:block">
-                    <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
-                        <Save className="h-5 w-5" />
-                        <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-                    </Button>
-                </div>
-            </div>
+
+<div className="hidden lg:block">
+    <Button 
+        onClick={handleSubmit} 
+        disabled={isSubmitting || isUploading}
+        className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+        <Save className="h-5 w-5" />
+        <span>
+            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+        </span>
+    </Button>
+</div></div>
     </TooltipProvider>
   )
 }

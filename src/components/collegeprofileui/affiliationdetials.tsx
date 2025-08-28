@@ -93,7 +93,11 @@ interface AffiliationdetialsProps {
 }
 
 // Success Modal Component
-
+// Helper function to capitalize first letter
+const capitalizeFirstLetter = (value: string) => {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
 
 // Error Modal Component
 
@@ -496,6 +500,12 @@ useEffect(() => {
     }
   }
 
+  const handleTextOnlyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  // Only allow letters, spaces, and basic punctuation
+  const textOnlyValue = value.replace(/[^a-zA-Z\s\.,\-\(\)]/g, '');
+  setAiuRecognition(capitalizeFirstLetter(textOnlyValue));
+};
   // Remove SRA program document
   const removeSRADocument = (programId: string) => {
     setSraProgramList(prev => prev.map(program => 
@@ -686,7 +696,7 @@ useEffect(() => {
           {/* Nature of College Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-50">
                 Nature of the college
               </Label>
               <InfoTooltip content="Select all applicable categories that describe the nature and ownership of your institution." />
@@ -730,7 +740,7 @@ useEffect(() => {
           {/* College Affiliation Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-50">
                 College Affiliation
               </Label>
               <InfoTooltip content="Specify whether your college is affiliated to or constituted by a university." />
@@ -753,7 +763,7 @@ useEffect(() => {
           {/* University State Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-50">
                 State
               </Label>
               <InfoTooltip content="Select the state where the parent university is located." />
@@ -779,7 +789,7 @@ useEffect(() => {
           {/* University Name Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-50">
                 University Name
               </Label>
               <InfoTooltip content="Select the university to which your college is affiliated or by which it is constituted." />
@@ -817,7 +827,7 @@ useEffect(() => {
           {/* Affiliation Document Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-50">
                 Affiliation Document
               </Label>
               <InfoTooltip content="Upload the official affiliation/constitution document from the university. PDF format only, maximum 5MB." />
@@ -844,7 +854,7 @@ useEffect(() => {
           {/* UGC Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the Institution recognized under section 2(f) of the UGC Act?
               </Label>
               <InfoTooltip content="Section 2(f) recognition means the institution is recognized by UGC as a university for higher education purposes." />
@@ -903,7 +913,7 @@ useEffect(() => {
           {/* UGC 12B Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the Institution recognized under section 12B of the UGC Act?
               </Label>
               <InfoTooltip content="Section 12B recognition allows the institution to receive central government grants and funding from UGC." />
@@ -965,7 +975,7 @@ useEffect(() => {
           {/* Autonomous College Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the institution recognised as an Autonomous College by the UGC?
               </Label>
               <InfoTooltip content="Autonomous colleges have the freedom to design their own courses, conduct examinations, and declare results within the university framework." />
@@ -1024,7 +1034,7 @@ useEffect(() => {
           {/* CPE Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the institution recognised as a College with Potential for Excellence CPE by the UGC?
               </Label>
               <InfoTooltip content="CPE is a UGC scheme to support colleges with potential for excellence by providing additional grants and autonomy." />
@@ -1083,7 +1093,7 @@ useEffect(() => {
           {/* College of Excellence Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the institution recognised as a College of Excellence by the UGC?
               </Label>
               <InfoTooltip content="College of Excellence is a prestigious recognition given by UGC to institutions demonstrating exceptional academic performance." />
@@ -1142,7 +1152,7 @@ useEffect(() => {
           {/* SRA Programs Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 Is the College offering any programmes recognised by any Statutory Regulatory Authority (SRA)?
               </Label>
               <InfoTooltip content="Statutory Regulatory Authorities include UGC, AICTE, NCTE, PCI etc. that regulate and approve specific professional programs." />
@@ -1269,7 +1279,7 @@ useEffect(() => {
           {/* AIU Recognition Section */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             <div className="flex items-center">
-              <Label className="text-sm font-medium w-full sm:w-40">
+              <Label className="text-sm font-medium w-full sm:w-70">
                 If the institution is not affiliated to a university and is offering programmes recognized by any Statutory Regulatory Authorities (SRA), are the programmes recognized by Association of Indian Universities(AIU) or other appropriate Government authorities as equivalent to UG / PG Programmes of a University?
               </Label>
               <InfoTooltip content="For non-affiliated institutions, AIU recognition ensures that programs are equivalent to university degree programs for employment and further education." />
@@ -1279,12 +1289,14 @@ useEffect(() => {
                 {/* Text Input */}
                 <div>
                   <Input 
-                    type="text"
-                    placeholder="Enter details about AIU recognition"
-                    className="w-full text-sm"
-                    value={aiuRecognition}
-                    onChange={(e) => setAiuRecognition(e.target.value)}
-                  />
+          type="text"
+          placeholder="Enter details about AIU recognition (text only)"
+          className="w-full text-sm"
+          value={aiuRecognition}
+          onChange={handleTextOnlyChange}
+          pattern="[A-Za-z\s\.,\-\(\)]*"
+          title="Please enter text only (letters, spaces, and basic punctuation)"
+        />
                 </div>
                 
                 {/* File Upload */}
@@ -1311,27 +1323,33 @@ useEffect(() => {
         </form>
 
         {/* Mobile Save Button */}
-    <div className=" lg:hidden fixed bottom-6 right-6 z-40">
-                        <Button 
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
-                        >
-                            <Save className="h-5 w-5" />
-                            <span className="hidden sm:inline">
-                                {isSubmitting ? 'Saving...' : 'Save'}
-                            </span>
-                        </Button>
-                    </div>
+<div className="lg:hidden fixed bottom-6 right-6 z-40">
+    <Button 
+        onClick={handleSubmit}
+        disabled={isSubmitting || isUploading}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+        <Save className="h-5 w-5" />
+        <span className="hidden sm:inline">
+            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+        </span>
+    </Button>
+</div>
 
-                {/* Desktop Save Button */}
-                <div className="hidden lg:block">
-                    <Button onClick={handleSubmit} className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition">
-                        <Save className="h-5 w-5" />
-                        <span>{isSubmitting ? 'Saving...' : 'Save'}</span>
-                    </Button>
-                </div>
-            </div>
+
+<div className="hidden lg:block">
+    <Button 
+        onClick={handleSubmit} 
+        disabled={isSubmitting || isUploading}
+        className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+        <Save className="h-5 w-5" />
+        <span>
+            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+        </span>
+    </Button>
+</div>
+</div>
     </TooltipProvider>
   )
 }
