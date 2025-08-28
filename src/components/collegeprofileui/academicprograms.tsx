@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -12,6 +12,7 @@ import { Universityandcollegedata } from '@/app/data/universityandcollegedata'
 
 import SuccessModal from "@/components/customui/SuccessModal"
 import ErrorModal from "@/components/customui/ErrorModal"
+
 // TypeScript interfaces for type safety
 interface AcademicProgramsFormData {
   ugPrograms: string
@@ -218,22 +219,54 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
 
   // Update programme detail field with capitalization for text fields
   const handleTextOnlyInput = (value: string) => {
-  // Only allow letters, spaces, and basic punctuation
-  const textOnlyValue = value.replace(/[^a-zA-Z\s\.,\-\(\)]/g, '');
-  return capitalizeFirstLetter(textOnlyValue);
-};
-  const updateProgrammeDetail = (id: string, field: keyof ProgrammeDetail, value: string | File | null) => {
-  let processedValue = value;
-  
-  // Apply text-only validation and capitalization for program and department fields
-  if (typeof value === 'string' && (field === 'program' || field === 'department')) {
-    processedValue = handleTextOnlyInput(value);
-  }
-  
-  setProgrammeDetails(prev => prev.map(item => 
-    item.id === id ? { ...item, [field]: processedValue } : item
-  ))
-}
+    // Only allow letters, spaces, and basic punctuation
+    const textOnlyValue = value.replace(/[^a-zA-Z\s\.,\-\(\)]/g, '');
+    return capitalizeFirstLetter(textOnlyValue);
+  };
+
+  const updateProgrammeDetail = useCallback((id: string, field: keyof ProgrammeDetail, value: string | File | null) => {
+    console.log(`Updating ${field} for ${id} with value:`, value);
+    
+    let processedValue = value;
+    
+    // Only apply text processing for specific string fields, not for affiliationStatus
+    if (typeof value === 'string' && (field === 'program' || field === 'department')) {
+      processedValue = handleTextOnlyInput(value);
+    }
+    
+    setProgrammeDetails(prev => {
+      const updated = prev.map(item =>
+        item.id === id ? { ...item, [field]: processedValue } : item
+      );
+      console.log('Updated state:', updated);
+      return updated;
+    });
+  }, []);
+
+  // FIXED: Dedicated radio button handler
+  const handleAffiliationStatusChange = useCallback((id: string, value: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(`Setting affiliation status for ${id} to:`, value);
+    
+    // Prevent any default behavior
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setProgrammeDetails(prev => {
+      const newState = prev.map(item => 
+        item.id === id 
+          ? { ...item, affiliationStatus: value }
+          : item
+      );
+      console.log('New state after affiliation change:', newState);
+      return newState;
+    });
+    
+    // Force a re-render by triggering a state update
+    setTimeout(() => {
+      setProgrammeDetails(current => [...current]);
+    }, 0);
+  }, []);
+
   // Handle state change for programme details
   const handleProgrammeStateChange = (id: string, state: string) => {
     setProgrammeDetails(prev => prev.map(item => 
@@ -264,48 +297,49 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
   }
 
   // Handle file upload for programme details
- const handleProgrammeFileChange = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0]
-  if (file && validateFile(file)) {
-    // Check if collegeId is available
-    if (!collegeId) {
-      setErrorMessage('College ID not found. Please refresh the page and try again.')
-      setShowErrorModal(true)
-      return
-    }
-
-    // Update the document first
-    updateProgrammeDetail(id, 'document', file)
-
-    // Upload the file
-    try {
-      setIsUploading(true) // Start upload
-      setUploadingCount(prev => prev + 1) // Increment upload counter
-      setUploadProgress(`Uploading programme document: ${file.name}...`)
-      const url = await uploadFileToS3(file, collegeId, 'iiqa3')
-      if (url) {
-        updateProgrammeDetail(id, 'documentUrl', url)
-        setUploadProgress(`Programme document uploaded successfully!`)
-        setTimeout(() => setUploadProgress(''), 3000)
+  const handleProgrammeFileChange = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && validateFile(file)) {
+      // Check if collegeId is available
+      if (!collegeId) {
+        setErrorMessage('College ID not found. Please refresh the page and try again.')
+        setShowErrorModal(true)
+        return
       }
-    } catch (error) {
-      console.error('Programme document upload error:', error);
-      const errorMessage = error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`
-      setErrorMessage(errorMessage)
-      setShowErrorModal(true)
-      setUploadProgress('')
-    } finally {
-      setUploadingCount(prev => prev - 1) // Decrement upload counter
-      // Only set isUploading to false when no more uploads are in progress
-      setUploadingCount(prev => {
-        if (prev <= 1) {
-          setIsUploading(false)
+
+      // Update the document first
+      updateProgrammeDetail(id, 'document', file)
+
+      // Upload the file
+      try {
+        setIsUploading(true) // Start upload
+        setUploadingCount(prev => prev + 1) // Increment upload counter
+        setUploadProgress(`Uploading programme document: ${file.name}...`)
+        const url = await uploadFileToS3(file, collegeId, 'iiqa3')
+        if (url) {
+          updateProgrammeDetail(id, 'documentUrl', url)
+          setUploadProgress(`Programme document uploaded successfully!`)
+          setTimeout(() => setUploadProgress(''), 3000)
         }
-        return Math.max(0, prev - 1)
-      })
+      } catch (error) {
+        console.error('Programme document upload error:', error);
+        const errorMessage = error instanceof Error ? error.message : `Failed to upload ${file.name}. Please try again.`
+        setErrorMessage(errorMessage)
+        setShowErrorModal(true)
+        setUploadProgress('')
+      } finally {
+        setUploadingCount(prev => prev - 1) // Decrement upload counter
+        // Only set isUploading to false when no more uploads are in progress
+        setUploadingCount(prev => {
+          if (prev <= 1) {
+            setIsUploading(false)
+          }
+          return Math.max(0, prev - 1)
+        })
+      }
     }
   }
-}
+
   // Remove programme document
   const removeProgrammeDocument = (id: string) => {
     updateProgrammeDetail(id, 'document', null)
@@ -445,8 +479,8 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
         setModalMessage('Academic programs saved successfully!')
         setShowSuccessModal(true)
         if (onDataUpdate) {
-  onDataUpdate();
-}
+          onDataUpdate();
+        }
       } else {
         setErrorMessage('Unexpected response from server')
         setShowErrorModal(true)
@@ -477,246 +511,275 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
     }
   }
 
-return (
-  <TooltipProvider>
-    <div className="w-full max-w-full mx-auto h-full flex flex-col relative overflow-hidden">
+  return (
+    <TooltipProvider>
+      <div className="w-full max-w-6xl mx-auto h-full flex flex-col relative">
 
-      {/* Success Modal */}
-      <SuccessModal 
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        message={modalMessage}
-      />
+        {/* Success Modal */}
+        <SuccessModal 
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          message={modalMessage}
+        />
 
-      {/* Error Modal */}
-      <ErrorModal 
-        isOpen={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        message={errorMessage}
-      />
-      
-      {/* Main Form Container */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-4 pb-24">
-        <form onSubmit={handleSubmit} className="w-full space-y-4 sm:space-y-6">
+        {/* Error Modal */}
+        <ErrorModal 
+          isOpen={showErrorModal}
+          onClose={() => setShowErrorModal(false)}
+          message={errorMessage}
+        />
+
+        <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <h3 className="text-lg font-semibold text-gray-800">Academic Programs</h3>
+              <InfoTooltip content="Enter the number of programs offered by your institution in each category and provide detailed information for each program." />
+            </div>
+          </div>
 
           {/* Program Counts Section */}
-          <div className="space-y-3 sm:space-y-4">
-            {/* Section Header */}
-            <div className="flex items-center space-x-2 mb-4">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Program Counts</h3>
-              <InfoTooltip content="Enter the number of programs offered by your institution in each category. Numbers should be accurate and current." />
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <h4 className="text-base font-medium text-gray-700">Program Counts</h4>
+              <InfoTooltip content="Enter accurate counts of programs currently offered by your institution." />
             </div>
-            
-            {/* Program Input Fields - Mobile Optimized */}
-            <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              
-              {/* UG Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">UG Programs</Label>
-                  <InfoTooltip content="Number of undergraduate programs offered by the institution including B.A., B.Sc., B.Com., B.Tech, etc." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of UG programs"
-                  className="w-full text-sm"
-                  value={ugPrograms}
-                  onChange={(e) => setUgPrograms(validateIntInput(e.target.value))}
-                />
-              </div>
 
-              {/* PG Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">PG Programs</Label>
-                  <InfoTooltip content="Number of postgraduate programs offered including M.A., M.Sc., M.Com., M.Tech, MBA, etc." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of PG programs"
-                  className="w-full text-sm"
-                  value={pgPrograms}
-                  onChange={(e) => setPgPrograms(validateIntInput(e.target.value))}
-                />
+            {/* UG Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  UG Programs
+                </Label>
+                <InfoTooltip content="Number of undergraduate programs offered by the institution including B.A., B.Sc., B.Com., B.Tech, etc." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of UG programs"
+                className="w-full sm:w-80 text-sm"
+                value={ugPrograms}
+                onChange={(e) => setUgPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* Post Master's Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Post Masters DM, Ayurveda Vachaspathi MCh</Label>
-                  <InfoTooltip content="Number of post-master's specialized programs like Doctor of Medicine (DM), Master of Chirurgiae (M.Ch), etc." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of Post Master's programs"
-                  className="w-full text-sm"
-                  value={postMastersPrograms}
-                  onChange={(e) => setPostMastersPrograms(validateIntInput(e.target.value))}
-                />
+            {/* PG Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  PG Programs
+                </Label>
+                <InfoTooltip content="Number of postgraduate programs offered including M.A., M.Sc., M.Com., M.Tech, MBA, etc." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of PG programs"
+                className="w-full sm:w-80 text-sm"
+                value={pgPrograms}
+                onChange={(e) => setPgPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* Pre Doctoral Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Pre Doctoral (M.Phil)</Label>
-                  <InfoTooltip content="Number of Master of Philosophy (M.Phil) programs offered as preparation for doctoral studies." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of Pre Doctoral programs"
-                  className="w-full text-sm"
-                  value={preDoctoralPrograms}
-                  onChange={(e) => setPreDoctoralPrograms(validateIntInput(e.target.value))}
-                />
+            {/* Post Master's Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Post Masters DM, Ayurveda Vachaspathi MCh
+                </Label>
+                <InfoTooltip content="Number of post-master's specialized programs like Doctor of Medicine (DM), Master of Chirurgiae (M.Ch), etc." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Post Master's programs"
+                className="w-full sm:w-80 text-sm"
+                value={postMastersPrograms}
+                onChange={(e) => setPostMastersPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* Doctoral Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Doctoral (Ph.D)</Label>
-                  <InfoTooltip content="Number of Doctor of Philosophy (Ph.D) programs offered across various disciplines." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of Doctoral programs"
-                  className="w-full text-sm"
-                  value={doctoralPrograms}
-                  onChange={(e) => setDoctoralPrograms(validateIntInput(e.target.value))}
-                />
+            {/* Pre Doctoral Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Pre Doctoral (M.Phil)
+                </Label>
+                <InfoTooltip content="Number of Master of Philosophy (M.Phil) programs offered as preparation for doctoral studies." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Pre Doctoral programs"
+                className="w-full sm:w-80 text-sm"
+                value={preDoctoralPrograms}
+                onChange={(e) => setPreDoctoralPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* Post Doctoral Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Post Doctoral (D.Sc, D.Litt, LED)</Label>
-                  <InfoTooltip content="Number of post-doctoral programs like Doctor of Science (D.Sc), Doctor of Literature (D.Litt), etc." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of Post Doctoral programs"
-                  className="w-full text-sm"
-                  value={postDoctoralPrograms}
-                  onChange={(e) => setPostDoctoralPrograms(validateIntInput(e.target.value))}
-                />
+            {/* Doctoral Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Doctoral (Ph.D)
+                </Label>
+                <InfoTooltip content="Number of Doctor of Philosophy (Ph.D) programs offered across various disciplines." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Doctoral programs"
+                className="w-full sm:w-80 text-sm"
+                value={doctoralPrograms}
+                onChange={(e) => setDoctoralPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* PG Diploma Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">PG Diploma recognised by statutory authority</Label>
-                  <InfoTooltip content="Number of postgraduate diploma programs recognized by statutory authorities like UGC, AICTE, etc." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of PG Diploma programs"
-                  className="w-full text-sm"
-                  value={pgDiplomaPrograms}
-                  onChange={(e) => setPgDiplomaPrograms(validateIntInput(e.target.value))}
-                />
+            {/* Post Doctoral Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Post Doctoral (D.Sc, D.Litt, LED)
+                </Label>
+                <InfoTooltip content="Number of post-doctoral programs like Doctor of Science (D.Sc), Doctor of Literature (D.Litt), etc." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Post Doctoral programs"
+                className="w-full sm:w-80 text-sm"
+                value={postDoctoralPrograms}
+                onChange={(e) => setPostDoctoralPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
 
-              {/* Diploma Programs */}
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Diploma</Label>
-                  <InfoTooltip content="Number of diploma programs offered in various technical and non-technical fields." />
-                </div>
-                <Input 
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  placeholder="Enter number of Diploma programs"
-                  className="w-full text-sm"
-                  value={diplomaPrograms}
-                  onChange={(e) => setDiplomaPrograms(validateIntInput(e.target.value))}
-                />
+            {/* PG Diploma Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  PG Diploma recognised by statutory authority
+                </Label>
+                <InfoTooltip content="Number of postgraduate diploma programs recognized by statutory authorities like UGC, AICTE, etc." />
               </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of PG Diploma programs"
+                className="w-full sm:w-80 text-sm"
+                value={pgDiplomaPrograms}
+                onChange={(e) => setPgDiplomaPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
+
+            {/* Diploma Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Diploma
+                </Label>
+                <InfoTooltip content="Number of diploma programs offered in various technical and non-technical fields." />
+              </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Diploma programs"
+                className="w-full sm:w-80 text-sm"
+                value={diplomaPrograms}
+                onChange={(e) => setDiplomaPrograms(validateIntInput(e.target.value))}
+              />
+            </div>
+
+            {/* Certificate Programs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center">
+                <Label className="text-sm font-medium w-full sm:w-50">
+                  Certificate Programs
+                </Label>
+                <InfoTooltip content="Number of certificate programs offered for skill development and professional training." />
+              </div>
+              <Input 
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                placeholder="Enter number of Certificate programs"
+                className="w-full sm:w-80 text-sm"
+                value={certificatePrograms}
+                onChange={(e) => setCertificatePrograms(validateIntInput(e.target.value))}
+              />
             </div>
           </div>
 
           {/* Programme Details Section */}
-          <div className="space-y-4 pt-4 sm:pt-6">
-            <div className="flex items-center space-x-2">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800">Programme Details</h3>
-              <InfoTooltip content="Add detailed information for each academic program offered" />
+          <div className="space-y-4 pt-6">
+            <div className="flex items-center">
+              <h4 className="text-base font-medium text-gray-700">Programme Details</h4>
+              <InfoTooltip content="Add detailed information for each academic program offered by your institution." />
             </div>
             
-            {/* Mobile: Card Layout, Desktop: Table Layout */}
             <div className="space-y-4">
               {/* Mobile View - Card Layout */}
               <div className="block lg:hidden space-y-4">
                 {programmeDetails.map((programme, index) => (
-                  <div key={programme.id} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-sm">
-                    {/* Card Header with Remove Button */}
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-gray-700">Program {index + 1}</h4>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeProgrammeDetail(programme.id)}
-                        className="text-red-600 hover:text-red-700 p-1 h-8 w-8"
-                        disabled={programmeDetails.length === 1}
-                      >
+                  <div key={programme.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 overflow-hidden">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-sm font-medium">Programme {index + 1}</h4>
+                      {programmeDetails.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeProgrammeDetail(programme.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
                     
-                      </Button>
-                    </div>
+                    <div className="space-y-3">
+                      {/* Program Name */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          Department
+                        </Label>
+                        <Input
+                          type="text"
+                          placeholder="Enter department name"
+                          className="w-full sm:w-64 text-sm"
+                          value={programme.department}
+                          onChange={(e) => updateProgrammeDetail(programme.id, 'department', e.target.value)}
+                        />
+                      </div>
 
-                    {/* Program Name */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">Program Name</Label>
-                      <Input
-                        type="text"
-                        placeholder="Enter program name"
-                        className="w-full text-sm"
-                        value={programme.program}
-                        onChange={(e) => updateProgrammeDetail(programme.id, 'program', e.target.value)}
-                      />
-                    </div>
-
-                    {/* Department */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">Department</Label>
-                      <Input
-                        type="text"
-                        placeholder="Enter department name"
-                        className="w-full text-sm"
-                        value={programme.department}
-                        onChange={(e) => updateProgrammeDetail(programme.id, 'department', e.target.value)}
-                      />
-                    </div>
-
-                    {/* State and University - Two Columns on Mobile */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">State</Label>
+                      {/* University State */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          State
+                        </Label>
                         <Select
+                          key={`state-${programme.id}-${programme.universityState || 'empty'}`}
                           value={programme.universityState}
                           onValueChange={(value) => handleProgrammeStateChange(programme.id, value)}
                         >
-                          <SelectTrigger className="w-full text-sm h-10">
+                          <SelectTrigger className="w-full sm:w-64 text-sm">
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                           <SelectContent>
@@ -729,20 +792,24 @@ return (
                         </Select>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label className="text-xs font-medium text-gray-600">University</Label>
+                      {/* University Name */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          University
+                        </Label>
                         <Select
+                          key={`university-${programme.id}-${programme.universityAffiliation || 'empty'}`}
                           value={programme.universityAffiliation}
                           onValueChange={(value) => updateProgrammeDetail(programme.id, 'universityAffiliation', value)}
                           disabled={!programme.universityState || getAvailableUniversitiesForState(programme.universityState).length === 0}
                         >
-                          <SelectTrigger className="w-full text-sm h-10">
+                          <SelectTrigger className="w-full sm:w-64 text-sm">
                             <SelectValue 
                               placeholder={
                                 !programme.universityState 
-                                  ? "Select state first" 
+                                  ? "Please select a state first" 
                                   : getAvailableUniversitiesForState(programme.universityState).length === 0 
-                                    ? "No universities" 
+                                    ? "No universities available" 
                                     : "Select university"
                               } 
                             />
@@ -750,98 +817,120 @@ return (
                           <SelectContent>
                             {getAvailableUniversitiesForState(programme.universityState).map((university) => (
                               <SelectItem key={university.name} value={university.name}>
-                                {university.name}
+                                <div className="flex flex-col">
+                                  <span>{university.name}</span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
 
-                    {/* SRA Recognition */}
-                    <div className="space-y-1">
-                      <Label className="text-xs font-medium text-gray-600">SRA Recognition</Label>
-                      <Select
-                        value={programme.sraRecognition}
-                        onValueChange={(value) => updateProgrammeDetail(programme.id, 'sraRecognition', value)}
-                      >
-                        <SelectTrigger className="w-full text-sm h-10">
-                          <SelectValue placeholder="Select SRA" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="UGC">UGC</SelectItem>
-                          <SelectItem value="NCTE">NCTE</SelectItem>
-                          <SelectItem value="AICTE">AICTE</SelectItem>
-                          <SelectItem value="PCI">PCI</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      {/* SRA Recognition */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          SRA Recognition
+                        </Label>
+                        <Select
+                          key={`sra-${programme.id}-${programme.sraRecognition || 'empty'}`}
+                          value={programme.sraRecognition}
+                          onValueChange={(value) => updateProgrammeDetail(programme.id, 'sraRecognition', value)}
+                        >
+                          <SelectTrigger className="w-full sm:w-64 text-sm">
+                            <SelectValue placeholder="Select SRA type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="UGC">UGC</SelectItem>
+                            <SelectItem value="NCTE">NCTE</SelectItem>
+                            <SelectItem value="AICTE">AICTE</SelectItem>
+                            <SelectItem value="PCI">PCI</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    {/* Affiliation Status */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-gray-600">Affiliation Status</Label>
-                      <div className="flex flex-row space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="radio"
-                            id={`temporary-${programme.id}`}
-                            name={`affiliation-${programme.id}`}
-                            value="Temporary"
-                            checked={programme.affiliationStatus === 'Temporary'}
-                            onChange={(e) => updateProgrammeDetail(programme.id, 'affiliationStatus', e.target.value)}
-                            className="w-4 h-4 text-blue-600"
-                          />
-                          <Label htmlFor={`temporary-${programme.id}`} className="text-sm">Temporary</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="radio"
-                            id={`permanent-${programme.id}`}
-                            name={`affiliation-${programme.id}`}
-                            value="Permanent"
-                            checked={programme.affiliationStatus === 'Permanent'}
-                            onChange={(e) => updateProgrammeDetail(programme.id, 'affiliationStatus', e.target.value)}
-                            className="w-4 h-4 text-blue-600"
-                          />
-                          <Label htmlFor={`permanent-${programme.id}`} className="text-sm">Permanent</Label>
+                      {/* FIXED: Affiliation Status - Mobile View */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          Affiliation Status
+                        </Label>
+                        <div className="w-full sm:w-64">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id={`mobile-temporary-${programme.id}`}
+                                name={`mobile-affiliation-${programme.id}`}
+                                value="Temporary"
+                                checked={programme.affiliationStatus === 'Temporary'}
+                                onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e as any)}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <Label htmlFor={`mobile-temporary-${programme.id}`} className="text-sm cursor-pointer">
+                                Temporary
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                id={`mobile-permanent-${programme.id}`}
+                                name={`mobile-affiliation-${programme.id}`}
+                                value="Permanent"
+                                checked={programme.affiliationStatus === 'Permanent'}
+                                onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e as any)}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <Label htmlFor={`mobile-permanent-${programme.id}`} className="text-sm cursor-pointer">
+                                Permanent
+                              </Label>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Document Upload */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-gray-600">Upload Document</Label>
-                      <Input
-                        type="file"
-                        accept=".pdf"
-                        onChange={(e) => handleProgrammeFileChange(programme.id, e)}
-                        className="w-full text-xs"
-                      />
-                      <p className="text-xs text-gray-500">PDF only (5MB Max.)</p>
-                      <FileControl
-                        documentUrl={programme.documentUrl ?? ""}
-                        document={programme.document}
-                        onRemove={() => removeProgrammeDocument(programme.id)}
-                        documentName="Programme Document"
-                      />
+                      {/* Document Upload */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
+                          Document
+                        </Label>
+                        <div className="w-full sm:w-64 min-w-0">
+                          <Input
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => handleProgrammeFileChange(programme.id, e)}
+                            className="text-sm truncate"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            File type: PDF only (Max. size: 5MB)
+                          </p>
+                          <FileControl
+                            documentUrl={programme.documentUrl || ''}
+                            document={programme.document}
+                            onRemove={() => removeProgrammeDocument(programme.id)}
+                            documentName={`Programme ${programme.program || ''} Document`}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
                 
                 {/* Add More Button - Mobile */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addProgrammeDetail}
-                  className="w-full text-blue-600 hover:text-blue-700 border-2 border-dashed border-blue-300 hover:border-blue-400 py-3"
-                >
-               
-                  Add More Programme Detail
-                </Button>
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addProgrammeDetail}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    Add More Programme Detail
+                  </Button>
+                </div>
               </div>
 
               {/* Desktop View - Table Layout */}
-              <div className="hidden lg:block overflow-x">
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full border border-gray-300 bg-white">
                   <thead>
                     <tr className="bg-gray-100">
@@ -962,31 +1051,38 @@ return (
                             </SelectContent>
                           </Select>
                         </td>
+                        {/* FIXED: Affiliation Status - Desktop View */}
                         <td className="border border-gray-300 px-3 py-2">
                           <div className="flex flex-col space-y-1">
                             <div className="flex items-center space-x-1">
                               <input
                                 type="radio"
-                                id={`temp-${programme.id}`}
-                                name={`affiliation-${programme.id}`}
+                                id={`desktop-temp-${programme.id}`}
+                                name={`desktop-affiliation-${programme.id}`}
                                 value="Temporary"
                                 checked={programme.affiliationStatus === 'Temporary'}
-                                onChange={(e) => updateProgrammeDetail(programme.id, 'affiliationStatus', e.target.value)}
-                                className="w-3 h-3"
+                                onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e as any)}
+                                className="w-3 h-3 cursor-pointer"
                               />
-                              <Label htmlFor={`temp-${programme.id}`} className="text-xs">Temp</Label>
+                              <Label htmlFor={`desktop-temp-${programme.id}`} className="text-xs cursor-pointer">
+                               Temporary
+                              </Label>
                             </div>
                             <div className="flex items-center space-x-1">
                               <input
                                 type="radio"
-                                id={`perm-${programme.id}`}
-                                name={`affiliation-${programme.id}`}
+                                id={`desktop-perm-${programme.id}`}
+                                name={`desktop-affiliation-${programme.id}`}
                                 value="Permanent"
                                 checked={programme.affiliationStatus === 'Permanent'}
-                                onChange={(e) => updateProgrammeDetail(programme.id, 'affiliationStatus', e.target.value)}
-                                className="w-3 h-3"
+                                onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e as any)}
+                                className="w-3 h-3 cursor-pointer"
                               />
-                              <Label htmlFor={`perm-${programme.id}`} className="text-xs">Perm</Label>
+                              <Label htmlFor={`desktop-perm-${programme.id}`} className="text-xs cursor-pointer">
+                            Permanent
+                              </Label>
                             </div>
                           </div>
                         </td>
@@ -1013,10 +1109,10 @@ return (
                             variant="outline"
                             size="sm"
                             onClick={() => removeProgrammeDetail(programme.id)}
-                            className="text-red-600 hover:text-red-700 p-1 h-8 w-8"
+                            className="text-red-600 hover:text-red-700 p-1 h-7 w-16"
                             disabled={programmeDetails.length === 1}
                           >
-                           Remove
+                            Remove
                           </Button>
                         </td>
                       </tr>
@@ -1029,7 +1125,6 @@ return (
                           onClick={addProgrammeDetail}
                           className="w-full text-blue-600 hover:text-blue-700 border-dashed"
                         >
-                        
                           Add More Programme Detail
                         </Button>
                       </td>
@@ -1040,29 +1135,42 @@ return (
             </div>
           </div>
         </form>
-      </div>
 
-      {/* Fixed Save Button */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button 
-          onClick={handleSubmit}
-          disabled={isSubmitting || isUploading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 sm:px-6 sm:py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Save className="h-4 w-4 sm:h-5 sm:w-5" />
-          <span className="text-sm sm:text-base">
-            {isUploading ? 'Uploading...' : isSubmitting ? 'Saving...' : 'Save'}
-          </span>
-        </Button>
-      </div>
-
-      {/* Upload Progress Display */}
-      {uploadProgress && (
-        <div className="fixed bottom-20 right-4 bg-blue-100 border border-blue-300 text-blue-700 px-3 py-2 rounded-lg shadow-md z-40 max-w-xs">
-          <p className="text-xs sm:text-sm">{uploadProgress}</p>
+        {/* Mobile Save Button */}
+        <div className="lg:hidden fixed bottom-6 right-6 z-40">
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting || isUploading}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="h-5 w-5" />
+            <span className="hidden sm:inline">
+              {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+            </span>
+          </Button>
         </div>
-      )}
-    </div>
-  </TooltipProvider>
-)
+
+        {/* Desktop Save Button */}
+        <div className="hidden lg:block">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || isUploading}
+            className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Save className="h-5 w-5" />
+            <span>
+              {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+            </span>
+          </Button>
+        </div>
+
+        {/* Upload Progress Display */}
+        {/* {uploadProgress && (
+          <div className="fixed bottom-20 right-4 bg-blue-100 border border-blue-300 text-blue-700 px-3 py-2 rounded-lg shadow-md z-40 max-w-xs">
+            <p className="text-xs sm:text-sm">{uploadProgress}</p>
+          </div>
+        )} */}
+      </div>
+    </TooltipProvider>
+  )
 }
