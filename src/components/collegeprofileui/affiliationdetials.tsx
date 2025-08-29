@@ -273,18 +273,32 @@ useEffect(() => {
 
   // Handle affiliation change
   const handleAffiliationChange = (value: string) => {
-    setCollegeAffiliation(value)
+    if (value === "clear") {
+      setCollegeAffiliation('');
+    } else {
+      setCollegeAffiliation(value);
+    }
   }
 
   // Handle state change
   const handleStateChange = (value: string) => {
-    setUniversityState(value)
-    // University name will be cleared by useEffect
+    if (value === "clear") {
+      setUniversityState('');
+      setUniversityName('');
+      setAvailableUniversities([]);
+    } else {
+      setUniversityState(value);
+      // University name will be cleared by useEffect
+    }
   }
 
   // Handle university name change
   const handleUniversityChange = (value: string) => {
-    setUniversityName(value)
+    if (value === "clear") {
+      setUniversityName('');
+    } else {
+      setUniversityName(value);
+    }
   }
 
   const FileControl = ({ 
@@ -532,11 +546,19 @@ useEffect(() => {
 
   // Update SRA program type
   const updateSRAProgramType = (programId: string, sraType: string) => {
-    setSraProgramList(prev => prev.map(program => 
-      program.id === programId 
-        ? { ...program, sraType }
-        : program
-    ))
+    if (sraType === "clear") {
+      setSraProgramList(prev => prev.map(program => 
+        program.id === programId 
+          ? { ...program, sraType: '' }
+          : program
+      ))
+    } else {
+      setSraProgramList(prev => prev.map(program => 
+        program.id === programId 
+          ? { ...program, sraType }
+          : program
+      ))
+    }
   }
 
   // Prepare form data with uploaded URLs
@@ -577,74 +599,77 @@ useEffect(() => {
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  e.preventDefault()
+  
+  try {
+    setIsSubmitting(true)
+    setUploadProgress('Submitting form data...')
     
-    try {
-      setIsSubmitting(true)
-      setUploadProgress('Submitting form data...')
-      
-      const formData = prepareFormData()
-      
-      // Get JWT token from localStorage or wherever you store it
-      const token = localStorage.getItem('token')
-      
-      if (!token) {
-        setErrorMessage('Authentication token not found. Please log in again.')
-        setShowErrorModal(true)
-        return
-      }
-
-      // Submit to your API
-      const response = await axios.post(
-        `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
-        {
-          questionId: "iiqa2",
-          answer: formData
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000
-        }
-      )
-      
-      if (response.data.message === "Answer saved") {
-        setUploadProgress('Form submitted successfully!')
-        setModalMessage('Affiliation details saved successfully!')
-        setShowSuccessModal(true)
-        if (onDataUpdate) {
-  onDataUpdate();
-}
-      } else {
-        setErrorMessage('Unexpected response from server')
-        setShowErrorModal(true)
-      }
-      
-    } catch (error) {
-      console.error('Error saving affiliation details:', error)
-      let errorMessage = 'An unknown error occurred';
-      
-      const axiosError = error as AxiosErrorResponse;
-      
-      if (axiosError.code === 'ERR_NETWORK') {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
-      } else if (axiosError.code === 'ECONNABORTED') {
-        errorMessage = 'Request timeout. Please try again.';
-      } else if (axiosError.response) {
-        errorMessage = `Server error: ${axiosError.response.status} ${axiosError.response.statusText}`;
-      } else if (axiosError.message) {
-        errorMessage = axiosError.message;
-      }
-      
-      setErrorMessage(errorMessage)
+    const formData = prepareFormData()
+    
+    console.log('Filtered form data being sent to API:', formData);
+    
+    // Get JWT token from localStorage or wherever you store it
+    const token = localStorage.getItem('token')
+    
+    if (!token) {
+      setErrorMessage('Authentication token not found. Please log in again.')
       setShowErrorModal(true)
-    } finally {
-      setIsSubmitting(false)
-      setTimeout(() => setUploadProgress(''), 3000)
+      return
     }
+
+    // Submit to your API
+    const response = await axios.post(
+      `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
+      {
+        questionId: "iiqa2",
+        answer: formData // This now contains only non-empty values
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000
+      }
+    )
+    
+    if (response.data.message === "Answer saved") {
+      setUploadProgress('Form submitted successfully!')
+      setModalMessage('Affiliation details saved successfully!')
+      setShowSuccessModal(true)
+      if (onDataUpdate) {
+        onDataUpdate();
+      }
+    } else {
+      setErrorMessage('Unexpected response from server')
+      setShowErrorModal(true)
+    }
+    
+  } catch (error) {
+    console.error('Error saving affiliation details:', error)
+    let errorMessage = 'An unknown error occurred';
+    
+    const axiosError = error as AxiosErrorResponse;
+    
+    if (axiosError.code === 'ERR_NETWORK') {
+      errorMessage = 'Network error. Please check your internet connection and try again.';
+    } else if (axiosError.code === 'ECONNABORTED') {
+      errorMessage = 'Request timeout. Please try again.';
+    } else if (axiosError.response) {
+      errorMessage = `Server error: ${axiosError.response.status} ${axiosError.response.statusText}`;
+    } else if (axiosError.message) {
+      errorMessage = axiosError.message;
+    }
+    
+    setErrorMessage(errorMessage)
+    setShowErrorModal(true)
+  } finally {
+    setIsSubmitting(false)
+    setTimeout(() => setUploadProgress(''), 3000)
   }
+}
+
 
   // View file function
   const viewFile = (url: string) => {
@@ -754,6 +779,7 @@ useEffect(() => {
                 <SelectValue placeholder="Select affiliation type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="clear">Select option</SelectItem>
                 <SelectItem value="Affiliated">Affiliated</SelectItem>
                 <SelectItem value="Constituted">Constituted</SelectItem>
               </SelectContent>
@@ -777,6 +803,7 @@ useEffect(() => {
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="clear">Select option</SelectItem>
                 {availableStates.map((state) => (
                   <SelectItem key={state} value={state}>
                     {state}
@@ -812,6 +839,7 @@ useEffect(() => {
                 />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="clear">Select option</SelectItem>
                 {availableUniversities.map((university) => (
                   <SelectItem key={university.name} value={university.name}>
                     <div className="flex flex-col">
@@ -1225,6 +1253,7 @@ useEffect(() => {
                               <SelectValue placeholder="Select SRA type" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="clear">Select option</SelectItem>
                               <SelectItem value="UGC">UGC</SelectItem>
                               <SelectItem value="NCTE">NCTE</SelectItem>
                               <SelectItem value="AICTE">AICTE</SelectItem>
@@ -1239,12 +1268,12 @@ useEffect(() => {
                             Document
                           </Label>
                         <div className="w-full sm:w-64 min-w-0">
-  <Input 
-    type="file"
-    accept=".pdf"
-    onChange={(e) => handleSRAFileChange(program.id, e)}
-    className="text-sm truncate"
-  />
+                          <Input 
+                            type="file"
+                            accept=".pdf"
+                            onChange={(e) => handleSRAFileChange(program.id, e)}
+                            className="text-sm truncate"
+                          />
                             <p className="text-xs text-gray-500 mt-1">
                               File type: PDF only (Max. size: 5MB)
                             </p>
@@ -1289,14 +1318,14 @@ useEffect(() => {
                 {/* Text Input */}
                 <div>
                   <Input 
-          type="text"
-          placeholder="Enter details about AIU recognition (text only)"
-          className="w-full text-sm"
-          value={aiuRecognition}
-          onChange={handleTextOnlyChange}
-          pattern="[A-Za-z\s\.,\-\(\)]*"
-          title="Please enter text only (letters, spaces, and basic punctuation)"
-        />
+                    type="text"
+                    placeholder="Enter details about AIU recognition (text only)"
+                    className="w-full text-sm"
+                    value={aiuRecognition}
+                    onChange={handleTextOnlyChange}
+                    pattern="[A-Za-z\s\.,\-\(\)]*"
+                    title="Please enter text only (letters, spaces, and basic punctuation)"
+                  />
                 </div>
                 
                 {/* File Upload */}
@@ -1323,33 +1352,33 @@ useEffect(() => {
         </form>
 
         {/* Mobile Save Button */}
-<div className="lg:hidden fixed bottom-6 right-6 z-40">
-    <Button 
-        onClick={handleSubmit}
-        disabled={isSubmitting || isUploading}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-        <Save className="h-5 w-5" />
-        <span className="hidden sm:inline">
-            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
-        </span>
-    </Button>
-</div>
+        <div className="lg:hidden fixed bottom-6 right-6 z-40">
+            <Button 
+                onClick={handleSubmit}
+                disabled={isSubmitting || isUploading}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <Save className="h-5 w-5" />
+                <span className="hidden sm:inline">
+                    {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+                </span>
+            </Button>
+        </div>
 
-
-<div className="hidden lg:block">
-    <Button 
-        onClick={handleSubmit} 
-        disabled={isSubmitting || isUploading}
-        className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-        <Save className="h-5 w-5" />
-        <span>
-            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
-        </span>
-    </Button>
-</div>
-</div>
+        {/* Desktop Save Button */}
+        <div className="hidden lg:block">
+            <Button 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || isUploading}
+                className="fixed bottom-7 right-15 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <Save className="h-5 w-5" />
+                <span>
+                    {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
+                </span>
+            </Button>
+        </div>
+      </div>
     </TooltipProvider>
   )
 }

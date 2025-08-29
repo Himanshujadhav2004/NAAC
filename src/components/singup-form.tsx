@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import Link from 'next/link';
 import axios from 'axios'
 import { AxiosError } from "axios"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation";
 import {
   InputOTP,
@@ -24,6 +24,17 @@ import {
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { jwtDecode as jwt_decode } from 'jwt-decode';
+import {collegeaishecodedata as AISHE_DATA} from '../app/data/collegeaishecodedata'
+
+// Sample AISHE data - replace this with your actual data
+
+
+type AisheData = {
+  AisheCode: string;
+  Name: string;
+  State: string;
+  District: string;
+};
 
 // ✅ Fixed: Updated type definition to match actual token structure
 type DecodedToken = {
@@ -82,6 +93,25 @@ export function SignupForm({
     }
   });
 
+  // New states for AISHE autocomplete
+  const [aisheInput, setAisheInput] = useState('');
+  const [showAisheSuggestions, setShowAisheSuggestions] = useState(false);
+  const [selectedAishe, setSelectedAishe] = useState<AisheData | null>(null);
+
+  // Filter AISHE data based on input
+  const filteredAisheData = useMemo(() => {
+    if (!aisheInput.trim()) return [];
+    
+    const searchTerm = aisheInput.toLowerCase();
+    // Search by numeric part of AisheCode (without C-) and other fields
+    return Object.values(AISHE_DATA).filter(item => {
+      const numericCode = item.AisheCode.replace(/^C-/, '');
+      return numericCode.toLowerCase().includes(searchTerm) ||
+             item.Name.toLowerCase().includes(searchTerm) ||
+             item.District.toLowerCase().includes(searchTerm);
+    }).slice(0, 10); // Limit to 10 results for performance
+  }, [aisheInput]);
+
   const handleRoleChange = (value: string) => {
     setRole(value);
   }
@@ -90,6 +120,28 @@ export function SignupForm({
     const newPassword = e.target.value;
     setPassword(newPassword);
     setPasswordValidation(validatePassword(newPassword));
+  };
+
+  // Handle AISHE input change
+  const handleAisheInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    // Only allow numeric characters
+    const numericOnly = inputValue.replace(/[^0-9]/g, '');
+    
+    setAisheInput(numericOnly);
+    setShowAisheSuggestions(numericOnly.length > 0);
+    setSelectedAishe(null);
+    setCollegeId(numericOnly);
+  };
+
+  // Handle AISHE selection
+  const handleAisheSelection = (item: AisheData) => {
+    setSelectedAishe(item);
+    // Extract only the numeric part for input display
+    const numericPart = item.AisheCode.replace(/^C-/, '');
+    setAisheInput(numericPart);
+    setShowAisheSuggestions(false);
+    setCollegeId(numericPart);
   };
 
   // Step 1: Initial signup
@@ -289,22 +341,66 @@ export function SignupForm({
                   )}
                   </span>
                 </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="collegeId">AISHE ID</Label>
+                
+                {/* Updated AISHE ID field with autocomplete */}
+                <div className="grid gap-3 relative">
+                  <Label htmlFor="aisheId">AISHE ID</Label>
                   <Input
-                    id="collegeId"
-                    type="number"
-                    placeholder="C-12334"
+                    id="aisheId"
+                    type="text"
+                    placeholder="Enter AISHE numeric code (e.g., 6574)"
                     required
-                    value={collegeId}
-                    onChange={(e) => setCollegeId(e.target.value)}
-                    onInput={(e) => {
-                      // Remove non-numeric characters
-                      const target = e.target as HTMLInputElement;
-                      target.value = target.value.replace(/[^0-9]/g, '');
+                    value={aisheInput}
+                    onChange={handleAisheInputChange}
+                    onFocus={() => aisheInput.length > 0 && setShowAisheSuggestions(true)}
+                    onBlur={() => {
+                      // Delay hiding to allow selection
+                      setTimeout(() => setShowAisheSuggestions(false), 200);
                     }}
+                    autoComplete="off"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                   />
+                  
+                  {/* Selected AISHE details */}
+                  {selectedAishe && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm font-medium text-green-800">Selected Institution:</p>
+                      <p className="text-sm font-medium text-green-700">{selectedAishe.AisheCode}</p>
+                      <p className="text-sm text-green-700">{selectedAishe.Name}</p>
+                      <p className="text-xs text-green-600">{selectedAishe.District}, {selectedAishe.State}</p>
+                    </div>
+                  )}
+
+                  {/* Suggestions dropdown */}
+                  {showAisheSuggestions && filteredAisheData.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {filteredAisheData.map((item) => (
+                        <div
+                          key={item.AisheCode}
+                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => handleAisheSelection(item)}
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-blue-600">{item.AisheCode}</span>
+                              <span className="text-xs bg-gray-100 px-2 py-1 rounded">{item.District}</span>
+                            </div>
+                            <p className="text-sm text-gray-700 line-clamp-2">{item.Name}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* No results message */}
+                  {showAisheSuggestions && aisheInput.length > 0 && filteredAisheData.length === 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-gray-500">
+                      <p className="text-sm">No AISHE codes found matching "{aisheInput}"</p>
+                    </div>
+                  )}
                 </div>
+
                 <div className="grid gap-3">
                   <Label className="text-sm font-medium">
                     Select Role
@@ -328,7 +424,7 @@ export function SignupForm({
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={loading || !passwordValidation.isValid || password !== confirmPassword}
+                    disabled={loading || !passwordValidation.isValid || password !== confirmPassword || !collegeId}
                   >
                     {loading ? "Creating Account..." : "Sign Up"}
                   </Button>

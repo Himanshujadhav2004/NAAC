@@ -126,62 +126,100 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
 
   // Load data from props when component mounts or data changes
   useEffect(() => {
-    const loadDataFromProps = () => {
-      try {
-        // Get collegeId from localStorage
-        const storedCollegeId = localStorage.getItem('collegeId');
-        if (storedCollegeId) {
-          setCollegeId(storedCollegeId);
-        }
-        
-        // Check if data exists and is for the correct questionId (iiqa3)
-        if (data && data.questionId === "iiqa3" && data.answer) {
-          console.log("Loading data from props:", data.answer);
-          
-          const existingData = data.answer;
-          
-          // Populate program counts
-          setUgPrograms(existingData.ugPrograms || '');
-          setPgPrograms(existingData.pgPrograms || '');
-          setPostMastersPrograms(existingData.postMastersPrograms || '');
-          setPreDoctoralPrograms(existingData.preDoctoralPrograms || '');
-          setDoctoralPrograms(existingData.doctoralPrograms || '');
-          setPostDoctoralPrograms(existingData.postDoctoralPrograms || '');
-          setPgDiplomaPrograms(existingData.pgDiplomaPrograms || '');
-          setDiplomaPrograms(existingData.diplomaPrograms || '');
-          setCertificatePrograms(existingData.certificatePrograms || '');
-          
-          // Populate programme details
-          if (existingData.programmeDetails && existingData.programmeDetails.length > 0) {
-            const programmeList = existingData.programmeDetails.map((programme: ExistingProgrammeDetail) => ({
-              id: programme.id || Date.now().toString(),
-              program: programme.program || '',
-              department: programme.department || '',
-              universityState: programme.universityState || '',
-              universityAffiliation: programme.universityAffiliation || '',
-              sraRecognition: programme.sraRecognition || '',
-              affiliationStatus: programme.affiliationStatus || '',
-              document: null, // We don't have the actual File objects
-              documentUrl: programme.documentUrl || undefined
-            }));
-            setProgrammeDetails(programmeList);
-          } else {
-            // Add default row if no existing data
-            addProgrammeDetail();
-          }
-        } else {
-          // Add default row for new forms or when no data
-          addProgrammeDetail();
-        }
-      } catch (error) {
-        console.error('Error loading data from props:', error);
-        // Add default row on error
-        addProgrammeDetail();
+  const loadDataFromProps = () => {
+    try {
+      // Get collegeId from localStorage
+      const storedCollegeId = localStorage.getItem('collegeId');
+      if (storedCollegeId) {
+        setCollegeId(storedCollegeId);
       }
-    };
+      
+      // Check if data exists and is for the correct questionId (iiqa3)
+      if (data && data.questionId === "iiqa3" && data.answer) {
+        console.log("Loading data from props:", data.answer);
+        
+        const existingData = data.answer;
+        
+        // Populate program counts
+        setUgPrograms(existingData.ugPrograms || '');
+        setPgPrograms(existingData.pgPrograms || '');
+        setPostMastersPrograms(existingData.postMastersPrograms || '');
+        setPreDoctoralPrograms(existingData.preDoctoralPrograms || '');
+        setDoctoralPrograms(existingData.doctoralPrograms || '');
+        setPostDoctoralPrograms(existingData.postDoctoralPrograms || '');
+        setPgDiplomaPrograms(existingData.pgDiplomaPrograms || '');
+        setDiplomaPrograms(existingData.diplomaPrograms || '');
+        setCertificatePrograms(existingData.certificatePrograms || '');
+        
+        // Handle programme details
+        if (existingData.programmeDetails && existingData.programmeDetails.length > 0) {
+          const programmeList = existingData.programmeDetails.map((programme: ExistingProgrammeDetail) => ({
+            id: programme.id || Date.now().toString(),
+            program: programme.program || '',
+            department: programme.department || '',
+            universityState: programme.universityState || '',
+            universityAffiliation: programme.universityAffiliation || '',
+            sraRecognition: programme.sraRecognition || '',
+            affiliationStatus: programme.affiliationStatus || '',
+            document: null, // We don't have the actual File objects
+            documentUrl: programme.documentUrl || undefined
+          }));
+          setProgrammeDetails(programmeList);
+        } else {
+          // Only add default row if no existing programme details
+          setProgrammeDetails([{
+            id: Date.now().toString(),
+            program: '',
+            department: '',
+            universityState: '',
+            universityAffiliation: '',
+            sraRecognition: '',
+            affiliationStatus: '',
+            document: null
+          }]);
+        }
+      } else {
+        // Add default row ONLY when no data exists (first load)
+        // Check if programmeDetails is empty to avoid duplicate additions
+        setProgrammeDetails(prev => {
+          if (prev.length === 0) {
+            return [{
+              id: Date.now().toString(),
+              program: '',
+              department: '',
+              universityState: '',
+              universityAffiliation: '',
+              sraRecognition: '',
+              affiliationStatus: '',
+              document: null
+            }];
+          }
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.error('Error loading data from props:', error);
+      // Only add default row if current state is empty
+      setProgrammeDetails(prev => {
+        if (prev.length === 0) {
+          return [{
+            id: Date.now().toString(),
+            program: '',
+            department: '',
+            universityState: '',
+            universityAffiliation: '',
+            sraRecognition: '',
+            affiliationStatus: '',
+            document: null
+          }];
+        }
+        return prev;
+      });
+    }
+  };
 
-    loadDataFromProps();
-  }, [data]); // Dependency on data prop
+  loadDataFromProps();
+}, [data]);
 
   // Initialize available universities for each state
   useEffect(() => {
@@ -217,7 +255,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
     }
   }
 
-  // Update programme detail field with capitalization for text fields
+  // Handle text only input with capitalization
   const handleTextOnlyInput = (value: string) => {
     // Only allow letters, spaces, and basic punctuation
     const textOnlyValue = value.replace(/[^a-zA-Z\s\.,\-\(\)]/g, '');
@@ -273,11 +311,53 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
 
   // Handle state change for programme details
   const handleProgrammeStateChange = (id: string, state: string) => {
-    setProgrammeDetails(prev => prev.map(item => 
-      item.id === id 
-        ? { ...item, universityState: state, universityAffiliation: '' } // Clear university when state changes
-        : item
-    ))
+    if (state === "clear") {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, universityState: '', universityAffiliation: '' }
+          : item
+      ))
+    } else {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, universityState: state, universityAffiliation: '' } // Clear university when state changes
+          : item
+      ))
+    }
+  }
+
+  // Handle university change for programme details
+  const handleProgrammeUniversityChange = (id: string, university: string) => {
+    if (university === "clear") {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, universityAffiliation: '' }
+          : item
+      ))
+    } else {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, universityAffiliation: university }
+          : item
+      ))
+    }
+  }
+
+  // Handle SRA change for programme details
+  const handleProgrammeSRAChange = (id: string, sra: string) => {
+    if (sra === "clear") {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, sraRecognition: '' }
+          : item
+      ))
+    } else {
+      setProgrammeDetails(prev => prev.map(item => 
+        item.id === id 
+          ? { ...item, sraRecognition: sra }
+          : item
+      ))
+    }
   }
 
   // Get available universities for a specific state
@@ -762,6 +842,20 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                       {/* Program Name */}
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                         <Label className="text-sm font-medium w-full sm:w-32">
+                          Program
+                        </Label>
+                        <Input
+                          type="text"
+                          placeholder="Enter program name"
+                          className="w-full sm:w-64 text-sm"
+                          value={programme.program}
+                          onChange={(e) => updateProgrammeDetail(programme.id, 'program', e.target.value)}
+                        />
+                      </div>
+
+                      {/* Department Name */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <Label className="text-sm font-medium w-full sm:w-32">
                           Department
                         </Label>
                         <Input
@@ -787,6 +881,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                             <SelectValue placeholder="Select state" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="clear">Select option</SelectItem>
                             {availableStates.map((state) => (
                               <SelectItem key={state} value={state}>
                                 {state}
@@ -804,7 +899,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                         <Select
                           key={`university-${programme.id}-${programme.universityAffiliation || 'empty'}`}
                           value={programme.universityAffiliation}
-                          onValueChange={(value) => updateProgrammeDetail(programme.id, 'universityAffiliation', value)}
+                          onValueChange={(value) => handleProgrammeUniversityChange(programme.id, value)}
                           disabled={!programme.universityState || getAvailableUniversitiesForState(programme.universityState).length === 0}
                         >
                           <SelectTrigger className="w-full sm:w-64 text-sm">
@@ -819,6 +914,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                             />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="clear">Select option</SelectItem>
                             {getAvailableUniversitiesForState(programme.universityState).map((university) => (
                               <SelectItem key={university.name} value={university.name}>
                                 <div className="flex flex-col">
@@ -838,12 +934,13 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                         <Select
                           key={`sra-${programme.id}-${programme.sraRecognition || 'empty'}`}
                           value={programme.sraRecognition}
-                          onValueChange={(value) => updateProgrammeDetail(programme.id, 'sraRecognition', value)}
+                          onValueChange={(value) => handleProgrammeSRAChange(programme.id, value)}
                         >
                           <SelectTrigger className="w-full sm:w-64 text-sm">
                             <SelectValue placeholder="Select SRA type" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="clear">Select option</SelectItem>
                             <SelectItem value="UGC">UGC</SelectItem>
                             <SelectItem value="NCTE">NCTE</SelectItem>
                             <SelectItem value="AICTE">AICTE</SelectItem>
@@ -1006,13 +1103,15 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                         </td>
                         <td className="border border-gray-300 px-3 py-2">
                           <Select
+                            key={`state-${programme.id}-${programme.universityState || 'empty'}`}
                             value={programme.universityState}
                             onValueChange={(value) => handleProgrammeStateChange(programme.id, value)}
                           >
                             <SelectTrigger className="w-full text-sm min-w-[110px]">
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="clear">Select option</SelectItem>
                               {availableStates.map((state) => (
                                 <SelectItem key={state} value={state}>
                                   {state}
@@ -1023,14 +1122,16 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                         </td>
                         <td className="border border-gray-300 px-3 py-2">
                           <Select
+                            key={`university-${programme.id}-${programme.universityAffiliation || 'empty'}`}
                             value={programme.universityAffiliation}
-                            onValueChange={(value) => updateProgrammeDetail(programme.id, 'universityAffiliation', value)}
+                            onValueChange={(value) => handleProgrammeUniversityChange(programme.id, value)}
                             disabled={!programme.universityState}
                           >
                             <SelectTrigger className="w-full text-sm min-w-[180px]">
                               <SelectValue placeholder="Select university" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="clear">Select option</SelectItem>
                               {getAvailableUniversitiesForState(programme.universityState).map((university) => (
                                 <SelectItem key={university.name} value={university.name}>
                                   {university.name}
@@ -1041,13 +1142,15 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                         </td>
                         <td className="border border-gray-300 px-3 py-2">
                           <Select
+                            key={`sra-${programme.id}-${programme.sraRecognition || 'empty'}`}
                             value={programme.sraRecognition}
-                            onValueChange={(value) => updateProgrammeDetail(programme.id, 'sraRecognition', value)}
+                            onValueChange={(value) => handleProgrammeSRAChange(programme.id, value)}
                           >
                             <SelectTrigger className="w-full text-sm min-w-[90px]">
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder="Select SRA" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="clear">Select option</SelectItem>
                               <SelectItem value="UGC">UGC</SelectItem>
                               <SelectItem value="NCTE">NCTE</SelectItem>
                               <SelectItem value="AICTE">AICTE</SelectItem>

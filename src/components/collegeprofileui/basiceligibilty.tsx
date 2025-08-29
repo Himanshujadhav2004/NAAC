@@ -331,7 +331,7 @@ const handleTextOnlyInputChange = (field: string, value: string) => {
     const capitalizedValue = capitalizeFirstLetter(textOnlyValue);
     setFormData(prev => ({ ...prev, [field]: capitalizedValue }));
 };
-
+// 2. Update the handleSubmit function to filter out empty values
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -362,7 +362,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     
     // If there are validation errors, don't submit and scroll to first error
     if (!isMandatoryFieldsValid || hasEmailErrors || hasUrlError) {
-        // Scroll to the first error field
         const firstErrorElement = document.querySelector('.border-red-500');
         if (firstErrorElement) {
             firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -384,9 +383,23 @@ const handleSubmit = async (e: React.FormEvent) => {
             alternateDistrict: selectedAlternateDistrict,
             ageOfInstitution: getAgeInYearsAndMonths(date)
         };
+
+        // Filter out empty values before sending to API
+        const filteredData = Object.fromEntries(
+            Object.entries(completeData).filter(([key, value]) => {
+                // Keep required fields even if empty (for validation)
+                const requiredFields = ['collegeAISHEID', 'cycleOfAccreditation', 'collegeName', 'establishmentDate', 'headOfInstitution'];
+                if (requiredFields.includes(key)) {
+                    return true;
+                }
+                // Filter out empty strings, null, undefined
+                return value !== '' && value !== null && value !== undefined;
+            })
+        );
         
         console.log('=== BASIC ELIGIBILITY FORM DATA ===');
         console.log('Complete Form Data:', completeData);
+        console.log('Filtered Data (sent to API):', filteredData);
    
         const token = localStorage.getItem("token");
 
@@ -394,38 +407,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             `https://${process.env.API}.execute-api.ap-south-1.amazonaws.com/dev/answers`,
             {
                 questionId: "iiqa1",
-                answer: {
-                    collegeAISHEID: completeData.collegeAISHEID,
-                    cycleOfAccreditation: completeData.cycleOfAccreditation,
-                    collegeName: completeData.collegeName,
-                    establishmentDate: completeData.establishmentDate,
-                    ageOfInstitution: getAgeInYearsAndMonths(date),
-                    headOfInstitution: completeData.headOfInstitution,
-                    designation: completeData.designation,
-                    ownCampus: completeData.ownCampus,
-                    address: completeData.address,
-                    state: completeData.state,
-                    district: completeData.district,
-                    city: completeData.city,
-                    pin: completeData.pin,
-                    phoneNo: completeData.phoneNo,
-                    faxNo: completeData.faxNo,
-                    mobileNo: completeData.mobileNo,
-                    email: completeData.email,
-                    alternateEmail: completeData.alternateEmail,
-                    website: completeData.website,
-                    alternateFacultyName: completeData.alternateFacultyName,
-                    alternateAddress: completeData.alternateAddress,
-                    alternateState: completeData.alternateState,
-                    alternateDistrict: completeData.alternateDistrict,
-                    alternateCity: completeData.alternateCity,
-                    alternatePin: completeData.alternatePin,
-                    alternatePhoneNo: completeData.alternatePhoneNo,
-                    alternateFaxNo: completeData.alternateFaxNo,
-                    alternateMobileNo: completeData.alternateMobileNo,
-                    alternateFacultyEmail: completeData.alternateFacultyEmail,
-                    alternateFacultyAlternateEmail: completeData.alternateFacultyAlternateEmail,
-                },
+                answer: filteredData, // Send filtered data instead of complete data
             },
             {
                 headers: {
@@ -478,128 +460,159 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     // ✅ FIXED: Main useEffect for data population with proper data validation
-    useEffect(() => {
-        const loadDataFromProps = () => {
-            try {
-                console.log("useEffect triggered with data:", data);
-                const collegeAISHEIDLocal = localStorage.getItem("collegeId");
-                // Populate from provided data when available
-                if (data && data.answer) {
-                    console.log("Loading data from parent:", data.answer);
-                    
-                    const existingData = data.answer;
-                    
-                    // Set form data with all fields properly mapped
-                    const sanitizedAnswer: CollegeFormData = {
-                        collegeAISHEID: existingData.collegeAISHEID ||collegeAISHEIDLocal|| '',
-                        cycleOfAccreditation: normalizeCycle(existingData.cycleOfAccreditation) || '',
-                        collegeName: existingData.collegeName || '',
-                        establishmentDate: existingData.establishmentDate || '',
-                        headOfInstitution: existingData.headOfInstitution || '',
-                        designation: normalizeDesignation(existingData.designation) || '',
-                        ownCampus: normalizeOwnCampus(existingData.ownCampus) || '',
-                        address: existingData.address || '',
-                        state: existingData.state || '',
-                        district: existingData.district || '',
-                        city: existingData.city || '',
-                        pin: existingData.pin || '',
-                        phoneNo: existingData.phoneNo || '',
-                        faxNo: existingData.faxNo || '',
-                        mobileNo: existingData.mobileNo || '',
-                        email: existingData.email || '',
-                        alternateEmail: existingData.alternateEmail || '',
-                        website: existingData.website || '',
-                        alternateFacultyName: existingData.alternateFacultyName || '',
-                        alternateAddress: existingData.alternateAddress || '',
-                        alternateState: existingData.alternateState || '',
-                        alternateDistrict: existingData.alternateDistrict || '',
-                        alternateCity: existingData.alternateCity || '',
-                        alternatePin: existingData.alternatePin || '',
-                        alternatePhoneNo: existingData.alternatePhoneNo || '',
-                        alternateFaxNo: existingData.alternateFaxNo || '',
-                        alternateMobileNo: existingData.alternateMobileNo || '',
-                        alternateFacultyEmail: existingData.alternateFacultyEmail || '',
-                        alternateFacultyAlternateEmail: existingData.alternateFacultyAlternateEmail || ''
-                    };
-                    
-                    console.log('🔍 Setting formData with normalized values:', {
-                        cycleOfAccreditation: sanitizedAnswer.cycleOfAccreditation,
-                        designation: sanitizedAnswer.designation,
-                        ownCampus: sanitizedAnswer.ownCampus
-                    });
-                    
-                    setFormData(sanitizedAnswer);
-
-                    // Handle establishment date
-                    if (existingData.establishmentDate) {
-                        try {
-                            const parsedDate = new Date(existingData.establishmentDate);
-                            if (!isNaN(parsedDate.getTime())) {
-                                setDate(parsedDate);
-                            }
-                        } catch (error) {
-                            console.error("Error parsing date:", error);
-                        }
-                    }
-
-                    // ✅ FIXED: Handle primary state and district with proper timing
-                    if (existingData.state) {
-                        console.log("Setting primary state:", existingData.state);
-                        setSelectedState(existingData.state);
-                        
-                        const stateDistricts = indiaData[existingData.state as keyof typeof indiaData] || [];
-                        setDistricts(stateDistricts);
-                        
-                        // Use setTimeout to ensure districts are set before setting selected district
-                        setTimeout(() => {
-                            if (existingData.district && stateDistricts.includes(existingData.district)) {
-                                console.log("Setting primary district:", existingData.district);
-                                setSelectedDistrict(existingData.district);
-                            } else {
-                                setSelectedDistrict('');
-                            }
-                        }, 0);
-                    } else {
-                        setSelectedState('');
-                        setSelectedDistrict('');
-                        setDistricts([]);
-                    }
-
-                    // ✅ FIXED: Handle alternate state and district with proper timing
-                    if (existingData.alternateState) {
-                        console.log("Setting alternate state:", existingData.alternateState);
-                        setSelectedAlternateState(existingData.alternateState);
-                        
-                        const alternateStateDistricts = indiaData[existingData.alternateState as keyof typeof indiaData] || [];
-                        setAlternateDistricts(alternateStateDistricts);
-                        
-                        // Use setTimeout to ensure alternate districts are set before setting selected alternate district
-                        setTimeout(() => {
-                            if (existingData.alternateDistrict && alternateStateDistricts.includes(existingData.alternateDistrict)) {
-                                console.log("Setting alternate district:", existingData.alternateDistrict);
-                                setSelectedAlternateDistrict(existingData.alternateDistrict);
-                            } else {
-                                setSelectedAlternateDistrict('');
-                            }
-                        }, 0);
-                    } else {
-                        setSelectedAlternateState('');
-                        setSelectedAlternateDistrict('');
-                        setAlternateDistricts([]);
-                    }
-                } else {
-                    // Do not reset local state when data is absent/mismatched.
-                    // This prevents clearing selections on tab switches while data is loading.
-                }
-            } catch (error) {
-                console.error('Error loading data from props:', error);
-                // Keep existing local state to avoid losing user selections.
+   useEffect(() => {
+    const loadDataFromProps = () => {
+        const collegeAISHEIDLocal = localStorage.getItem("collegeId");
+        
+        try {
+            console.log("useEffect triggered with data:", data);
+            console.log("College ID from localStorage:", collegeAISHEIDLocal);
+       
+            // Always set the collegeAISHEID from localStorage first
+            if (collegeAISHEIDLocal) {
+                setFormData(prev => ({
+                    ...prev,
+                    collegeAISHEID: collegeAISHEIDLocal
+                }));
             }
-        };
 
-        loadDataFromProps();
-    }, [data]); // Dependency on data prop
+            // Then populate from provided data when available
+            if (data && data.answer) {
+                console.log("Loading data from parent:", data.answer);
+                
+                const existingData = data.answer;
+                
+                // Set form data with all fields properly mapped
+                const sanitizedAnswer: CollegeFormData = {
+                    collegeAISHEID: existingData.collegeAISHEID || collegeAISHEIDLocal || '',
+                    cycleOfAccreditation: normalizeCycle(existingData.cycleOfAccreditation) || '',
+                    collegeName: existingData.collegeName || '',
+                    establishmentDate: existingData.establishmentDate || '',
+                    headOfInstitution: existingData.headOfInstitution || '',
+                    designation: normalizeDesignation(existingData.designation) || '',
+                    ownCampus: normalizeOwnCampus(existingData.ownCampus) || '',
+                    address: existingData.address || '',
+                    state: existingData.state || '',
+                    district: existingData.district || '',
+                    city: existingData.city || '',
+                    pin: existingData.pin || '',
+                    phoneNo: existingData.phoneNo || '',
+                    faxNo: existingData.faxNo || '',
+                    mobileNo: existingData.mobileNo || '',
+                    email: existingData.email || '',
+                    alternateEmail: existingData.alternateEmail || '',
+                    website: existingData.website || '',
+                    alternateFacultyName: existingData.alternateFacultyName || '',
+                    alternateAddress: existingData.alternateAddress || '',
+                    alternateState: existingData.alternateState || '',
+                    alternateDistrict: existingData.alternateDistrict || '',
+                    alternateCity: existingData.alternateCity || '',
+                    alternatePin: existingData.alternatePin || '',
+                    alternatePhoneNo: existingData.alternatePhoneNo || '',
+                    alternateFaxNo: existingData.alternateFaxNo || '',
+                    alternateMobileNo: existingData.alternateMobileNo || '',
+                    alternateFacultyEmail: existingData.alternateFacultyEmail || '',
+                    alternateFacultyAlternateEmail: existingData.alternateFacultyAlternateEmail || ''
+                };
+                
+                console.log('🔍 Setting formData with normalized values:', {
+                    cycleOfAccreditation: sanitizedAnswer.cycleOfAccreditation,
+                    designation: sanitizedAnswer.designation,
+                    ownCampus: sanitizedAnswer.ownCampus,
+                    collegeAISHEID: sanitizedAnswer.collegeAISHEID
+                });
+                
+                setFormData(sanitizedAnswer);
 
+                // Handle establishment date
+                if (existingData.establishmentDate) {
+                    try {
+                        const parsedDate = new Date(existingData.establishmentDate);
+                        if (!isNaN(parsedDate.getTime())) {
+                            setDate(parsedDate);
+                        }
+                    } catch (error) {
+                        console.error("Error parsing date:", error);
+                    }
+                }
+
+                // ✅ FIXED: Handle primary state and district with proper timing
+                if (existingData.state) {
+                    console.log("Setting primary state:", existingData.state);
+                    setSelectedState(existingData.state);
+                    
+                    const stateDistricts = indiaData[existingData.state as keyof typeof indiaData] || [];
+                    setDistricts(stateDistricts);
+                    
+                    // Use setTimeout to ensure districts are set before setting selected district
+                    setTimeout(() => {
+                        if (existingData.district && stateDistricts.includes(existingData.district)) {
+                            console.log("Setting primary district:", existingData.district);
+                            setSelectedDistrict(existingData.district);
+                        } else {
+                            setSelectedDistrict('');
+                        }
+                    }, 0);
+                } else {
+                    setSelectedState('');
+                    setSelectedDistrict('');
+                    setDistricts([]);
+                }
+
+                // ✅ FIXED: Handle alternate state and district with proper timing
+                if (existingData.alternateState) {
+                    console.log("Setting alternate state:", existingData.alternateState);
+                    setSelectedAlternateState(existingData.alternateState);
+                    
+                    const alternateStateDistricts = indiaData[existingData.alternateState as keyof typeof indiaData] || [];
+                    setAlternateDistricts(alternateStateDistricts);
+                    
+                    // Use setTimeout to ensure alternate districts are set before setting selected alternate district
+                    setTimeout(() => {
+                        if (existingData.alternateDistrict && alternateStateDistricts.includes(existingData.alternateDistrict)) {
+                            console.log("Setting alternate district:", existingData.alternateDistrict);
+                            setSelectedAlternateDistrict(existingData.alternateDistrict);
+                        } else {
+                            setSelectedAlternateDistrict('');
+                        }
+                    }, 0);
+                } else {
+                    setSelectedAlternateState('');
+                    setSelectedAlternateDistrict('');
+                    setAlternateDistricts([]);
+                }
+            } else {
+                // Even when data is not available, ensure collegeAISHEID is set from localStorage
+                console.log("No data from parent, but ensuring collegeAISHEID is set from localStorage");
+            }
+        } catch (error) {
+            console.error('Error loading data from props:', error);
+            // Even on error, try to set collegeAISHEID from localStorage
+            const collegeAISHEIDLocal = localStorage.getItem("collegeId");
+            if (collegeAISHEIDLocal) {
+                setFormData(prev => ({
+                    ...prev,
+                    collegeAISHEID: collegeAISHEIDLocal
+                }));
+            }
+        }
+    };
+
+    loadDataFromProps();
+}, [data]);
+// Add this useEffect AFTER the existing one to handle initial localStorage load
+useEffect(() => {
+    // This runs only once when component mounts to ensure collegeAISHEID is always set from localStorage
+    const collegeAISHEIDLocal = localStorage.getItem("collegeId");
+    
+    if (collegeAISHEIDLocal && !formData.collegeAISHEID) {
+        console.log("Initial load: Setting collegeAISHEID from localStorage:", collegeAISHEIDLocal);
+        setFormData(prev => ({
+            ...prev,
+            collegeAISHEID: collegeAISHEIDLocal
+        }));
+    }
+}, []); 
     // Keep selects in sync with formData when it comes prefilled (e.g., from parent or remount)
     useEffect(() => {
         if (formData.state) {
@@ -665,7 +678,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
             <label htmlFor="College_AISHE_ID" className="text-sm font-medium w-full sm:w-40">
-                College AISHE ID
+                College AISHE ID *
             </label>
             <InfoTooltip content="Enter the unique AISHE (All India Survey on Higher Education) ID assigned to your college by the Ministry of Education." />
         </div>
@@ -683,28 +696,35 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
             <label htmlFor="Cycle_of_Accreditation" className="text-sm font-medium w-full sm:w-40">
-                Cycle of Accreditation
+                Cycle of Accreditation *
             </label>
             <InfoTooltip content="Select the current cycle of accreditation your institution is applying for or has completed with NAAC." />
         </div>
            <div className="w-full sm:w-80">
-        <Select 
-            key={`cycle-${formData.cycleOfAccreditation || 'empty'}`}
-            required 
-            value={formData.cycleOfAccreditation}
-            onValueChange={(value) => handleInputChange('cycleOfAccreditation', value)}
-        >
-            <SelectTrigger className="w-full sm:w-80 text-sm">
-                <SelectValue placeholder="select" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="Cycle1">Cycle1</SelectItem>
-                <SelectItem value="Cycle2">Cycle2</SelectItem>
-                <SelectItem value="Cycle3">Cycle3</SelectItem>
-                <SelectItem value="Cycle4">Cycle4</SelectItem>
-                <SelectItem value="Cycle5">Cycle5</SelectItem>
-            </SelectContent>
-        </Select>
+     <Select 
+    key={`cycle-${formData.cycleOfAccreditation || 'empty'}`}
+    required 
+    value={formData.cycleOfAccreditation}
+    onValueChange={(value) => {
+        if (value === "clear") {
+            handleInputChange('cycleOfAccreditation', '');
+        } else {
+            handleInputChange('cycleOfAccreditation', value);
+        }
+    }}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder="Select cycle" />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        <SelectItem value="Cycle1">Cycle1</SelectItem>
+        <SelectItem value="Cycle2">Cycle2</SelectItem>
+        <SelectItem value="Cycle3">Cycle3</SelectItem>
+        <SelectItem value="Cycle4">Cycle4</SelectItem>
+        <SelectItem value="Cycle5">Cycle5</SelectItem>
+    </SelectContent>
+</Select>
          {mandatoryFieldErrors.cycleOfAccreditation && (
         <p className="text-red-500 text-xs mt-1">{mandatoryFieldErrors.cycleOfAccreditation}</p>
     )}
@@ -738,7 +758,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
             <Label htmlFor="date" className="text-sm font-medium w-full sm:w-40">
-                Date of establishment of the Institution
+                Date of establishment of the Institution *
             </Label>
             <InfoTooltip content="Select the official date when the institution was established or founded. This date should match your registration documents." />
         </div>
@@ -777,7 +797,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
         <div className="flex items-center">
             <label htmlFor="Name_of_the_Head_of_the_Institution" className="text-sm font-medium w-full sm:w-40">
-                Name of the Head of the Institution
+                Name of the Head of the Institution *
             </label>
             <InfoTooltip content="Enter the full name of the current head of the institution (Principal, Director, etc.)" />
         </div>
@@ -805,21 +825,27 @@ const handleSubmit = async (e: React.FormEvent) => {
             </label>
             <InfoTooltip content="Select the official designation of the head of the institution." />
         </div>
-        <Select 
-            key={`designation-${formData.designation || 'empty'}`}
-            required
-            value={formData.designation}
-            onValueChange={(value) => handleInputChange('designation', value)}
-        >
-            <SelectTrigger className="w-full sm:w-80 text-sm">
-                <SelectValue placeholder="select" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="Principal">Principal</SelectItem>
-                <SelectItem value="Director">Director</SelectItem>
-                <SelectItem value="Principal In charge">Principal In charge</SelectItem>
-            </SelectContent>
-        </Select>
+       <Select 
+    key={`designation-${formData.designation || 'empty'}`}
+    value={formData.designation}
+    onValueChange={(value) => {
+        if (value === "clear") {
+            handleInputChange('designation', '');
+        } else {
+            handleInputChange('designation', value);
+        }
+    }}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder="Select designation" />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        <SelectItem value="Principal">Principal</SelectItem>
+        <SelectItem value="Director">Director</SelectItem>
+        <SelectItem value="Principal In charge">Principal In charge</SelectItem>
+    </SelectContent>
+</Select>
     </div>
 
     {/* Own Campus */}
@@ -830,20 +856,26 @@ const handleSubmit = async (e: React.FormEvent) => {
             </label>
             <InfoTooltip content="Select whether the college operates from its own campus or on a leased property." />
         </div>
-        <Select 
-            key={`owncampus-${formData.ownCampus || 'empty'}`}
-            required
-            value={formData.ownCampus}
-            onValueChange={(value) => handleInputChange('ownCampus', value)}
-        >
-            <SelectTrigger className="w-full sm:w-80 text-sm">
-                <SelectValue placeholder="select" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="Yes">Yes</SelectItem>
-                <SelectItem value="On_Lease">On Lease</SelectItem>
-            </SelectContent>
-        </Select>
+     <Select 
+    key={`owncampus-${formData.ownCampus || 'empty'}`}
+    value={formData.ownCampus}
+    onValueChange={(value) => {
+        if (value === "clear") {
+            handleInputChange('ownCampus', '');
+        } else {
+            handleInputChange('ownCampus', value);
+        }
+    }}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder="Select option" />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        <SelectItem value="Yes">Yes</SelectItem>
+        <SelectItem value="On_Lease">On Lease</SelectItem>
+    </SelectContent>
+</Select>
     </div>
 
     {/* Address */}
@@ -870,24 +902,33 @@ const handleSubmit = async (e: React.FormEvent) => {
             <label className="text-sm font-medium w-full sm:w-40">State / Union Territory</label>
             <InfoTooltip content="Select the state or union territory where the college is located." />
         </div>
-        <Select 
-            required 
-            onValueChange={handleStateChange}
-            value={selectedState}
-        >
-            <SelectTrigger className="w-full sm:w-80 text-sm">
-                <SelectValue placeholder="Select State/UT" />
-            </SelectTrigger>
-            <SelectContent>
-                {Object.keys(indiaData)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map((state) => (
-                        <SelectItem key={state} value={state}>
-                            {state}
-                        </SelectItem>
-                    ))}
-            </SelectContent>
-        </Select>
+       <Select 
+    onValueChange={(value) => {
+        if (value === "clear") {
+            setSelectedState('');
+            setSelectedDistrict('');
+            setDistricts([]);
+            setFormData(prev => ({ ...prev, state: '', district: '' }));
+        } else {
+            handleStateChange(value);
+        }
+    }}
+    value={selectedState}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder="Select State/UT" />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        {Object.keys(indiaData)
+            .sort((a, b) => a.localeCompare(b))
+            .map((state) => (
+                <SelectItem key={state} value={state}>
+                    {state}
+                </SelectItem>
+            ))}
+    </SelectContent>
+</Select>
     </div>
 
     {/* District */}
@@ -898,26 +939,34 @@ const handleSubmit = async (e: React.FormEvent) => {
             </label>
             <InfoTooltip content="Select the district where the college is located. Please select state first." />
         </div>
-        <Select 
-            required 
-            disabled={!selectedState} 
-            onValueChange={handleDistrictChange}
-            value={selectedDistrict}
-        >
-            <SelectTrigger className="w-full sm:w-80 text-sm">
-                <SelectValue placeholder={selectedState ? 'Select District' : 'Select State first'} />
-            </SelectTrigger>
-            <SelectContent>
-                {districts
-                    .slice()
-                    .sort((a, b) => a.localeCompare(b))
-                    .map((district) => (
-                        <SelectItem key={district} value={district}>
-                            {district}
-                        </SelectItem>
-                    ))}
-            </SelectContent>
-        </Select>
+     <Select 
+    disabled={!selectedState} 
+    onValueChange={(value) => {
+        if (value === "clear") {
+            setSelectedDistrict('');
+            setFormData(prev => ({ ...prev, district: '' }));
+        } else {
+            handleDistrictChange(value);
+        }
+    }}
+    value={selectedDistrict}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder={selectedState ? 'Select District' : 'Select State first'} />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        {districts
+            .slice()
+            .sort((a, b) => a.localeCompare(b))
+            .map((district) => (
+                <SelectItem key={district} value={district}>
+                    {district}
+                </SelectItem>
+            ))}
+    </SelectContent>
+</Select>
+
     </div>
 
     {/* City */}
@@ -1153,23 +1202,33 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </label>
                 <InfoTooltip content="Select the state or union territory for the alternate faculty contact." />
             </div>
-            <Select 
-                onValueChange={handleAlternateStateChange}
-                value={selectedAlternateState}
-            >
-                <SelectTrigger className="w-full sm:w-80 text-sm">
-                    <SelectValue placeholder="Select State/UT" />
-                </SelectTrigger>
-                <SelectContent>
-                    {Object.keys(indiaData)
-                        .sort((a, b) => a.localeCompare(b))
-                        .map((state) => (
-                        <SelectItem key={state} value={state}>
-                            {state}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+          <Select 
+    onValueChange={(value) => {
+        if (value === "clear") {
+            setSelectedAlternateState('');
+            setSelectedAlternateDistrict('');
+            setAlternateDistricts([]);
+            setFormData(prev => ({ ...prev, alternateState: '', alternateDistrict: '' }));
+        } else {
+            handleAlternateStateChange(value);
+        }
+    }}
+    value={selectedAlternateState}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder="Select State/UT" />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        {Object.keys(indiaData)
+            .sort((a, b) => a.localeCompare(b))
+            .map((state) => (
+            <SelectItem key={state} value={state}>
+                {state}
+            </SelectItem>
+        ))}
+    </SelectContent>
+</Select>
         </div>
 
         {/* Alternate District Selector */}
@@ -1180,25 +1239,33 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </label>
                 <InfoTooltip content="Select the district for the alternate faculty contact." />
             </div>
-            <Select 
-                disabled={!selectedAlternateState} 
-                onValueChange={handleAlternateDistrictChange}
-                value={selectedAlternateDistrict}
-            >
-                <SelectTrigger className="w-full sm:w-80 text-sm">
-                    <SelectValue placeholder={selectedAlternateState ? 'Select District' : 'Select State first'} />
-                </SelectTrigger>
-                <SelectContent>
-                    {alternateDistricts
-                        .slice()
-                        .sort((a, b) => a.localeCompare(b))
-                        .map((district) => (
-                        <SelectItem key={district} value={district}>
-                            {district}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+          <Select 
+    disabled={!selectedAlternateState} 
+    onValueChange={(value) => {
+        if (value === "clear") {
+            setSelectedAlternateDistrict('');
+            setFormData(prev => ({ ...prev, alternateDistrict: '' }));
+        } else {
+            handleAlternateDistrictChange(value);
+        }
+    }}
+    value={selectedAlternateDistrict}
+>
+    <SelectTrigger className="w-full sm:w-80 text-sm">
+        <SelectValue placeholder={selectedAlternateState ? 'Select District' : 'Select State first'} />
+    </SelectTrigger>
+    <SelectContent>
+        <SelectItem value="clear">Select option</SelectItem>
+        {alternateDistricts
+            .slice()
+            .sort((a, b) => a.localeCompare(b))
+            .map((district) => (
+            <SelectItem key={district} value={district}>
+                {district}
+            </SelectItem>
+        ))}
+    </SelectContent>
+</Select>
         </div>
 
         {/* Alternate City */}
