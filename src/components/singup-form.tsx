@@ -396,7 +396,7 @@ export function SignupForm({
                   {/* No results message */}
                   {showAisheSuggestions && aisheInput.length > 0 && filteredAisheData.length === 0 && (
                     <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-gray-500">
-                      <p className="text-sm">No AISHE codes found matching "{aisheInput}"</p>
+                      <p className="text-sm">No AISHE codes found matching {aisheInput}</p>
                     </div>
                   )}
                 </div>
