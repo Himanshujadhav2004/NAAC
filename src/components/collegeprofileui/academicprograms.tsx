@@ -243,8 +243,12 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
     });
   }, []);
 
-  // FIXED: Dedicated radio button handler
-  const handleAffiliationStatusChange = useCallback((id: string, value: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  // FIXED: Dedicated radio button handler with proper types
+  const handleAffiliationStatusChange = useCallback((
+    id: string, 
+    value: string, 
+    e: React.ChangeEvent<HTMLInputElement> | React.MouseEvent<HTMLInputElement>
+  ) => {
     console.log(`Setting affiliation status for ${id} to:`, value);
     
     // Prevent any default behavior
@@ -863,7 +867,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                                 value="Temporary"
                                 checked={programme.affiliationStatus === 'Temporary'}
                                 onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
-                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e as any)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e)}
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer"
                               />
                               <Label htmlFor={`mobile-temporary-${programme.id}`} className="text-sm cursor-pointer">
@@ -878,7 +882,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                                 value="Permanent"
                                 checked={programme.affiliationStatus === 'Permanent'}
                                 onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
-                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e as any)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e)}
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer"
                               />
                               <Label htmlFor={`mobile-permanent-${programme.id}`} className="text-sm cursor-pointer">
@@ -1062,7 +1066,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                                 value="Temporary"
                                 checked={programme.affiliationStatus === 'Temporary'}
                                 onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
-                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e as any)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Temporary', e)}
                                 className="w-3 h-3 cursor-pointer"
                               />
                               <Label htmlFor={`desktop-temp-${programme.id}`} className="text-xs cursor-pointer">
@@ -1077,7 +1081,7 @@ export const Academicprograms = ({ data,onDataUpdate }: AcademicProgramsProps) =
                                 value="Permanent"
                                 checked={programme.affiliationStatus === 'Permanent'}
                                 onChange={(e) => handleAffiliationStatusChange(programme.id, e.target.value, e)}
-                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e as any)}
+                                onClick={(e) => handleAffiliationStatusChange(programme.id, 'Permanent', e)}
                                 className="w-3 h-3 cursor-pointer"
                               />
                               <Label htmlFor={`desktop-perm-${programme.id}`} className="text-xs cursor-pointer">
