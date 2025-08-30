@@ -3,7 +3,7 @@
 import { Suspense } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import CollegeProfile from "@/components/collegeprofile"
-import ProjectStructure from "@/components/projectstructure"
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -146,6 +146,7 @@ function DashboardLoading() {
 // Main page component wrapped with Suspense
 export default function Page() {
   return (
+    
     <Suspense fallback={<DashboardLoading />}>
       <DashboardContent />
     </Suspense>

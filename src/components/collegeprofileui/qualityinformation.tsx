@@ -4,7 +4,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Checkbox } from '../ui/checkbox'
 import { Calendar } from "@/components/ui/calendar"
-import { ChevronDownIcon, Save } from "lucide-react"
+import { ChevronDownIcon, Save, X ,ArrowUp} from "lucide-react"
 import {
     Popover,
     PopoverContent,
@@ -111,10 +111,6 @@ const dateToApiFormat = (date: Date | undefined): string => {
   return normalizedDate.toISOString().split('T')[0]
 }
 
-
-
-
-
 // Helper to validate integer input
 const validateIntInput = (value: string) => {
   if (value === '') return ''
@@ -130,8 +126,6 @@ const calculateTotal = (male: string, female: string, transgender: string) => {
   const transgenderNum = Number(transgender) || 0
   return String(maleNum + femaleNum + transgenderNum)
 }
-
-// Tooltip component with better alignment
 
 export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,onDataUpdate}) => {
   // State management
@@ -235,7 +229,7 @@ export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,on
     }
   }, [data]); // Dependency on data prop
 
-  // Validate file - Updated to 10MB
+  // Validate file for Academic MoU - Updated to 10MB
   const validateFile = (file: File): boolean => {
     if (file.type !== 'application/pdf') {
       setErrorMessage('Please select a PDF file only')
@@ -244,6 +238,21 @@ export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,on
     }
     if (file.size > 10 * 1024 * 1024) {
       setErrorMessage('File size must be less than 10MB')
+      setShowErrorModal(true)
+      return false
+    }
+    return true
+  }
+
+  // Validate file for Certification Document - Updated to 5MB
+  const validateCertificationFile = (file: File): boolean => {
+    if (file.type !== 'application/pdf') {
+      setErrorMessage('Please select a PDF file only')
+      setShowErrorModal(true)
+      return false
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('File size must be less than 5MB')
       setShowErrorModal(true)
       return false
     }
@@ -287,7 +296,7 @@ export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,on
   // Handle file upload for Certification Document
   const handleCertificationFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && validateFile(file)) {
+    if (file && validateCertificationFile(file)) {
       // Check if collegeId is available
       if (!collegeId) {
         setErrorMessage('College ID not found. Please refresh the page and try again.')
@@ -337,8 +346,7 @@ export const Qualityinformation: React.FC<QualityinformationProps> = ({ data ,on
     }
   }
 
-  // File control component for consistent UI
-// File control component for consistent UI with truncated file names
+  // File control component for consistent UI with truncated file names
 const FileControl = ({ 
   documentUrl, 
   document, 
@@ -402,6 +410,17 @@ const FileControl = ({
 
   const handleAisheDateChange = (selectedDate: Date | undefined) => {
     setAisheDate(selectedDate)
+  }
+
+  // Clear date handlers
+  const clearIqacDate = () => {
+    setIqacDate(undefined)
+    setIqacDateOpen(false)
+  }
+
+  const clearAisheDate = () => {
+    setAisheDate(undefined)
+    setAisheDateOpen(false)
   }
 
   // URL validation helper
@@ -563,13 +582,6 @@ finally {
 
         <form onSubmit={handleSubmit} className="w-full overflow-y-auto p-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-6">
           
-          {/* Upload Progress Indicator */}
-          {/* {uploadProgress && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-blue-800">{uploadProgress}</p>
-            </div>
-          )} */}
-
           {/* Staff and Student Counts Section */}
           <div className="space-y-4" id="staff-student-section">
             <div className="flex items-center justify-between">
@@ -840,43 +852,59 @@ finally {
             {/* IQAC Establishment Date */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center">
-                <Label className="text-sm font-medium w-full sm:w-40">
+                <Label className="text-sm font-medium w-full sm:w-60">
                   IQAC Establishment Date
                 </Label>
                 <InfoTooltip content="Date when Internal Quality Assurance Cell (IQAC) was established in the institution. Format: DD-MM-YYYY" />
               </div>
-              <Popover open={iqacDateOpen} onOpenChange={setIqacDateOpen}>
-                <PopoverTrigger asChild>
+              <div className="flex items-center gap-2 w-full sm:w-80">
+                <Popover open={iqacDateOpen} onOpenChange={setIqacDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex-1 justify-between font-normal text-sm"
+                    >
+                      {iqacDate ? formatDate(iqacDate) : "Select date"}
+                      <ChevronDownIcon />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={iqacDate}
+                      captionLayout="dropdown"
+                      onSelect={(date) => {
+                        handleIqacDateChange(date)
+                        setIqacDateOpen(false)
+                      }}
+                      fromYear={1900}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {iqacDate && (
                   <Button
+                    type="button"
                     variant="outline"
-                    className="w-full sm:w-80 justify-between font-normal text-sm"
+                    size="sm"
+                    onClick={clearIqacDate}
+                    className="px-2 py-1 h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    title="Clear date"
                   >
-                    {iqacDate ? formatDate(iqacDate) : "Select date"}
-                    <ChevronDownIcon />
+                    <X className="h-4 w-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={iqacDate}
-                    captionLayout="dropdown"
-                    onSelect={(date) => {
-                      handleIqacDateChange(date)
-                      setIqacDateOpen(false)
-                    }}
-                    fromYear={1900}
-                    toYear={new Date().getFullYear()}
-                  />
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
             </div>
 
             {/* RTI Declaration */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <div className="flex items-center">
-                  <Label className="text-sm font-medium w-full sm:w-40">
-                    RTI Declaration
+                  <Label className="text-sm font-medium w-full sm:w-60">
+                 Has the institution made statutory declaration on the
+institution website under Section 4 (1) (b) of the RTI
+Act 2005 as issued and amended from time to time.
                   </Label>
                   <InfoTooltip content="Whether the institution has published RTI (Right to Information) declaration on its website as per RTI Act 2005." />
                 </div>
@@ -911,7 +939,7 @@ finally {
               {rtiDeclaration === 'Yes' && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <div className="flex items-center">
-                    <Label className="text-sm font-medium w-full sm:w-40">
+                    <Label className="text-sm font-medium w-full sm:w-60">
                       RTI Declaration URL
                     </Label>
                     <InfoTooltip content="Provide the web URL where RTI declaration is published on your institution's website." />
@@ -931,8 +959,8 @@ finally {
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <div className="flex items-center">
-                  <Label className="text-sm font-medium w-full sm:w-40">
-                    Academic MoU
+                  <Label className="text-sm font-medium w-full sm:w-60">
+                   Does the college have an academic MoU with any foreign institution?
                   </Label>
                   <InfoTooltip content="Whether the institution has signed academic Memorandum of Understanding (MoU) with other institutions for academic collaboration." />
                 </div>
@@ -967,7 +995,7 @@ finally {
               {academicMou === 'Yes' && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <div className="flex items-center">
-                    <Label className="text-sm font-medium w-full sm:w-40">
+                    <Label className="text-sm font-medium w-full sm:w-60">
                       Academic MoU Document
                     </Label>
                     <InfoTooltip content="Upload signed academic MoU document(s). PDF format only, maximum 10MB." />
@@ -996,44 +1024,62 @@ finally {
             {/* AISHE Upload Date */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center">
-                <Label className="text-sm font-medium w-full sm:w-40">
-                  AISHE Upload Date
+                <Label className="text-sm font-medium w-full sm:w-60">
+                  Date of uploading data on MHRD website for All India Survey on Higher
+Education (AISHE).
                 </Label>
                 <InfoTooltip content="Date when institution data was last uploaded to AISHE (All India Survey on Higher Education) portal. Format: DD-MM-YYYY" />
               </div>
-              <Popover open={aisheDateOpen} onOpenChange={setAisheDateOpen}>
-                <PopoverTrigger asChild>
+              <div className="flex items-center gap-2 w-full sm:w-80">
+                <Popover open={aisheDateOpen} onOpenChange={setAisheDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex-1 justify-between font-normal text-sm"
+                    >
+                      {aisheDate ? formatDate(aisheDate) : "Select date"}
+                      <ChevronDownIcon />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={aisheDate}
+                      captionLayout="dropdown"
+                      onSelect={(date) => {
+                        handleAisheDateChange(date)
+                        setAisheDateOpen(false)
+                      }}
+                      fromYear={2010}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {aisheDate && (
                   <Button
+                    type="button"
                     variant="outline"
-                    className="w-full sm:w-80 justify-between font-normal text-sm"
+                    size="sm"
+                    onClick={clearAisheDate}
+                    className="px-2 py-1 h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    title="Clear date"
                   >
-                    {aisheDate ? formatDate(aisheDate) : "Select date"}
-                    <ChevronDownIcon />
+                    <X className="h-4 w-4" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={aisheDate}
-                    captionLayout="dropdown"
-                    onSelect={(date) => {
-                      handleAisheDateChange(date)
-                      setAisheDateOpen(false)
-                    }}
-                    fromYear={2010}
-                    toYear={new Date().getFullYear()}
-                  />
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
             </div>
 
             {/* Certification Document */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <div className="flex items-center">
-                <Label className="text-sm font-medium w-full sm:w-40">
-                  Certification Document
+                <Label className="text-sm font-medium w-full sm:w-60">
+              Attach Certification by the Head of the Institution for having complied with
+Rules & Regulations of Central Government, UGC and other Statutory Bodies,
+State Government and Affiliating University in the
+prescribed format enclosed herewith.
                 </Label>
-                <InfoTooltip content="Upload any relevant institutional certification documents such as accreditation certificates, recognition letters, etc. PDF format only, maximum 10MB." />
+                <InfoTooltip content="Upload any relevant institutional certification documents" />
               </div>
               <div className="space-y-1 w-full sm:w-80">
                 <Input 
@@ -1043,7 +1089,7 @@ finally {
                   className="w-full text-sm"
                 />
                 <p className="text-xs text-gray-500">
-                  PDF only (10MB Max.)
+                  PDF only (5MB Max.)
                 </p>
                 <FileControl
                   documentUrl={certificationDocumentUrl}
@@ -1057,19 +1103,19 @@ finally {
         </form>
         
         {/* Mobile Save Button */}
-  <div className="lg:hidden fixed bottom-6 right-6 z-40">
+<div className="lg:hidden fixed bottom-6 right-6 z-40">
     <Button 
         onClick={handleSubmit}
         disabled={isSubmitting || isUploading}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-blue-600 hover:bg-blue-700 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
     >
-        <Save className="h-5 w-5" />
-        <span className="hidden sm:inline">
-            {isUploading ? 'Uploading file...' : isSubmitting ? 'Saving...' : 'Save'}
-        </span>
+        {isUploading ? (
+            <ArrowUp className="h-6 w-6" />
+        ) : (
+            <Save className="h-6 w-6" />
+        )}
     </Button>
 </div>
-
 
 <div className="hidden lg:block">
     <Button 
